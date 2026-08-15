@@ -1,0 +1,5 @@
+# Backups locales pesados, no hacen falta para el sitio publicado
+videos_original/
+
+# Artifacts de deploy manual (Netlify)
+*.zip

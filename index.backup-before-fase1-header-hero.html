@@ -1,0 +1,898 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BluinenF — Ilustrador Digital</title>
+<meta name="description" content="Portfolio de BluinenF, ilustrador digital independiente. Arte, dibujos y proceso creativo.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #0b0b10;
+    --bg-alt: #121218;
+    --card: #16161e;
+    --text: #ece9f2;
+    --text-dim: #aca6c1;
+    --accent: #b586ff;
+    --accent-2: #ff6fb0;
+    --border: rgba(255,255,255,0.08);
+    --radius-sm: 16px;
+    --radius-lg: 24px;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:'Inter', system-ui, sans-serif;
+    line-height:1.6;
+    overflow-x:hidden;
+    position:relative;
+  }
+  h1,h2,h3,.brand{font-family:'Space Grotesk', 'Inter', sans-serif;}
+  a{color:inherit;text-decoration:none;}
+  img{display:block;max-width:100%;}
+  button{font-family:inherit;cursor:pointer;}
+
+  ::selection{background:var(--accent);color:#0b0b10;}
+
+  /* film grain overlay */
+  body::before{
+    content:'';position:fixed;inset:0;z-index:2;pointer-events:none;
+    opacity:.035;mix-blend-mode:overlay;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  /* ambient glow orbs */
+  .glow-orb{
+    position:absolute;border-radius:50%;filter:blur(70px);pointer-events:none;z-index:0;
+    opacity:.35;
+  }
+
+  /* NAV */
+  header{
+    position:fixed;top:0;left:0;right:0;z-index:100;
+    display:flex;align-items:center;justify-content:space-between;
+    padding:18px 6vw;
+    backdrop-filter:blur(14px);
+    background:rgba(11,11,16,0.55);
+    border-bottom:1px solid var(--border);
+    transition:background .3s, padding .3s, box-shadow .3s;
+  }
+  header.scrolled{
+    padding:12px 6vw;
+    background:rgba(11,11,16,0.85);
+    box-shadow:0 10px 40px -20px rgba(0,0,0,0.6);
+  }
+  .brand{font-weight:700;font-size:1.25rem;letter-spacing:.5px;}
+  .brand span{color:var(--accent);}
+  nav ul{display:flex;gap:2.2rem;list-style:none;align-items:center;}
+  nav a{font-size:.92rem;color:var(--text-dim);font-weight:500;letter-spacing:.2px;transition:color .2s;position:relative;}
+  nav a:hover{color:var(--text);}
+  nav a.active-link{color:var(--text);}
+  nav a.active-link::after{
+    content:'';position:absolute;left:0;right:0;bottom:-6px;height:2px;border-radius:2px;
+    background:linear-gradient(90deg, var(--accent), var(--accent-2));
+  }
+  .nav-cta{
+    border:1px solid rgba(255,111,176,0.35);padding:8px 18px;border-radius:999px;
+    font-size:.85rem !important;background:rgba(255,111,176,0.06);
+  }
+  .nav-cta:hover{border-color:var(--accent-2);color:var(--accent-2) !important;background:rgba(255,111,176,0.12);}
+  .menu-toggle{display:none;background:none;border:none;color:var(--text);font-size:1.5rem;cursor:pointer;}
+
+  /* BUTTONS */
+  .btn{
+    padding:13px 26px;border-radius:999px;font-weight:600;font-size:.95rem;
+    display:inline-flex;align-items:center;gap:8px;
+    transition:transform .2s, box-shadow .2s, background .2s, border-color .2s;
+    position:relative;border:1.5px solid transparent;
+  }
+  .btn-primary{
+    background:linear-gradient(120deg, var(--accent), var(--accent-2));
+    color:#0b0b10;
+  }
+  .btn-primary:hover{transform:translateY(-2px);box-shadow:0 12px 34px -8px rgba(181,134,255,0.65);}
+  .btn-outline{
+    border-color:rgba(255,111,176,0.4);
+    color:var(--text);
+    background:rgba(255,111,176,0.06);
+  }
+  .btn-outline:hover{border-color:var(--accent-2);transform:translateY(-2px);background:rgba(255,111,176,0.14);box-shadow:0 10px 28px -10px rgba(255,111,176,0.4);}
+  .btn-ghost{
+    border-color:var(--border);color:var(--text-dim);background:transparent;
+  }
+  .btn-ghost:hover{border-color:var(--accent);color:var(--text);}
+
+  /* SECTIONS */
+  section{padding:5.5rem 6vw;position:relative;scroll-margin-top:88px;}
+  .section-tag{
+    font-size:.78rem;color:var(--accent);letter-spacing:2px;text-transform:uppercase;font-weight:600;margin-bottom:.8rem;
+    display:flex;align-items:center;gap:8px;justify-content:center;
+  }
+  .about .section-tag, .hero-text .section-tag{justify-content:flex-start;}
+  .section-tag::before{
+    content:'';width:18px;height:1px;background:var(--accent);
+  }
+  .section-title{
+    font-size:clamp(1.8rem, 4vw, 2.6rem);font-weight:700;margin-bottom:1.2rem;
+  }
+  .section-title .hl{color:var(--accent-2);}
+
+  .reveal{opacity:0;transform:translateY(28px);transition:opacity .7s ease, transform .7s ease;}
+  .reveal.in-view{opacity:1;transform:translateY(0);}
+
+  /* FILTER TABS */
+  .filter-tabs{display:flex;gap:.7rem;justify-content:center;flex-wrap:wrap;margin-bottom:2.5rem;position:relative;z-index:1;}
+  .filter-tab{
+    padding:9px 18px;border-radius:999px;font-size:.85rem;font-weight:600;
+    border:1.5px solid var(--border);color:var(--text-dim);background:rgba(255,255,255,0.02);
+    display:inline-flex;align-items:center;gap:6px;transition:.2s;
+  }
+  .filter-tab:hover{color:var(--text);border-color:rgba(181,134,255,0.4);}
+  .filter-tab.active{
+    border-color:var(--accent-2);color:var(--accent-2);
+    background:rgba(255,111,176,0.1);
+  }
+
+  /* HERO */
+  .hero{
+    position:relative;
+    padding-top:calc(88px + 2.5rem);
+    padding-bottom:3rem;
+    overflow:hidden;
+    min-height:640px;
+  }
+  .hero-bg-img{
+    position:absolute;inset:0;z-index:0;
+    width:100%;height:100%;object-fit:cover;
+    object-position:78% 30%;
+  }
+  .hero-scrim{
+    position:absolute;inset:0;z-index:1;pointer-events:none;
+    background:linear-gradient(90deg,
+      var(--bg) 0%,
+      rgba(11,11,16,0.94) 28%,
+      rgba(11,11,16,0.62) 50%,
+      rgba(11,11,16,0.15) 72%,
+      transparent 88%);
+  }
+  .hero-row{
+    max-width:1300px;margin:0 auto;
+    position:relative;z-index:2;min-height:540px;
+    display:flex;align-items:center;
+  }
+  .hero-text{max-width:540px;position:relative;z-index:2;}
+  .eyebrow{
+    display:inline-flex;align-items:center;gap:8px;
+    font-size:.78rem;color:var(--accent-2);letter-spacing:1.5px;text-transform:uppercase;font-weight:600;
+    margin-bottom:1.4rem;
+    opacity:0;animation:fadeUp .8s ease forwards .1s;
+  }
+  .eyebrow::before{content:'';width:18px;height:1px;background:var(--accent-2);}
+  .hero h1{
+    font-size:clamp(3rem, 6vw, 4.6rem);
+    font-weight:700;line-height:1.02;
+    background:linear-gradient(120deg, #fff 10%, var(--accent) 45%, var(--accent-2) 70%, #fff 100%);
+    background-size:250% auto;
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+    margin-bottom:1.3rem;
+    opacity:0;animation:fadeUp .8s ease forwards .22s, shimmer 7s linear infinite 1.2s;
+  }
+  @keyframes shimmer{
+    0%{background-position:0% center;}
+    100%{background-position:250% center;}
+  }
+  .hero-text p{
+    font-size:clamp(1rem, 1.4vw, 1.12rem);
+    color:var(--text-dim);
+    max-width:460px;margin-bottom:2.2rem;
+    opacity:0;animation:fadeUp .8s ease forwards .36s;
+  }
+  .hero-actions{display:flex;gap:1rem;flex-wrap:wrap;
+    opacity:0;animation:fadeUp .8s ease forwards .5s;
+  }
+  .scroll-hint-inline{
+    margin-top:2.2rem;font-size:.8rem;color:var(--text-dim);
+    display:flex;align-items:center;gap:8px;
+    opacity:0;animation:fadeUp .8s ease forwards .64s;
+  }
+  .scroll-hint-inline .dot-pulse{
+    width:6px;height:6px;border-radius:50%;background:var(--accent-2);
+    animation:bob 1.6s ease-in-out infinite;
+  }
+  @keyframes fadeUp{
+    from{opacity:0;transform:translateY(16px);}
+    to{opacity:1;transform:translateY(0);}
+  }
+  @keyframes bob{0%,100%{transform:translateY(0);}50%{transform:translateY(5px);}}
+
+  .hero-sparkle{position:absolute;color:var(--accent-2);font-size:1.3rem;opacity:0;animation:twinkle 3.5s ease-in-out infinite;pointer-events:none;z-index:2;}
+  @keyframes twinkle{
+    0%,100%{opacity:0;transform:scale(.6) rotate(0deg);}
+    50%{opacity:.9;transform:scale(1.1) rotate(15deg);}
+  }
+
+  /* HERO CAROUSEL */
+  .hero-carousel-wrap{padding:3.5rem 6vw 0;}
+  .hero-carousel{max-width:1300px;margin:0 auto;position:relative;z-index:1;}
+  .hero-carousel-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.2rem;}
+  .hero-carousel-header .section-tag{margin-bottom:0;}
+  .carousel-nav{display:flex;gap:.5rem;}
+  .carousel-arrow{
+    width:38px;height:38px;border-radius:50%;
+    border:1px solid var(--border);background:rgba(255,255,255,0.03);color:var(--text);
+    display:flex;align-items:center;justify-content:center;transition:.2s;
+  }
+  .carousel-arrow:hover{border-color:var(--accent-2);color:var(--accent-2);}
+  .carousel-track{
+    display:flex;gap:14px;overflow-x:auto;scroll-snap-type:x proximity;
+    padding-bottom:6px;scrollbar-width:none;
+  }
+  .carousel-track::-webkit-scrollbar{display:none;}
+  .carousel-item{
+    flex:0 0 auto;width:170px;aspect-ratio:3/4;border-radius:var(--radius-sm);
+    overflow:hidden;border:1px solid var(--border);cursor:pointer;scroll-snap-align:start;
+    position:relative;
+  }
+  .carousel-item img{width:100%;height:100%;object-fit:cover;transition:transform .5s ease;}
+  .carousel-item:hover img{transform:scale(1.08);}
+
+  /* ABOUT */
+  #sobre-mi{overflow:hidden;}
+  .about{
+    display:grid;grid-template-columns:300px 1fr;gap:4rem;align-items:center;
+    max-width:1100px;margin:0 auto;position:relative;z-index:1;
+  }
+  .about-portrait{
+    position:relative;border-radius:var(--radius-lg);overflow:hidden;
+    border:1px solid var(--border);
+    box-shadow:0 30px 60px -20px rgba(181,134,255,0.25);
+  }
+  .about-portrait::after{
+    content:'';position:absolute;inset:0;
+    background:linear-gradient(200deg, transparent 60%, rgba(181,134,255,0.25));
+    pointer-events:none;
+  }
+  .about-portrait img{aspect-ratio:4/5;object-fit:cover;width:100%;transition:transform .6s ease;}
+  .about-portrait:hover img{transform:scale(1.05);}
+  .about-text p{color:var(--text-dim);font-size:1.05rem;margin-bottom:1.1rem;max-width:560px;}
+  .about-text strong{color:var(--text);font-weight:600;}
+  .stats{display:flex;gap:2.2rem;margin-top:2rem;flex-wrap:wrap;padding-top:1.6rem;border-top:1px solid var(--border);}
+  .stat{display:flex;align-items:center;gap:.7rem;}
+  .stat-icon{
+    width:38px;height:38px;border-radius:12px;flex-shrink:0;
+    display:flex;align-items:center;justify-content:center;
+    background:rgba(181,134,255,0.1);border:1px solid var(--border);
+    font-size:1.1rem;
+  }
+  .stat b{display:block;font-size:1.5rem;font-family:'Space Grotesk',sans-serif;color:var(--accent);line-height:1.1;}
+  .stat span{font-size:.8rem;color:var(--text-dim);}
+
+  /* DEL BOCETO AL COLOR */
+  .process-demo{max-width:1200px;margin:5rem auto 0;position:relative;z-index:1;}
+  .process-demo-head{display:flex;align-items:flex-end;justify-content:space-between;gap:2rem;flex-wrap:wrap;margin-bottom:2.2rem;}
+  .process-demo-head .section-tag{justify-content:flex-start;}
+  .process-demo-head p{color:var(--text-dim);max-width:420px;}
+  .process-track{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;position:relative;}
+  .process-card{
+    background:var(--card);border:1px solid var(--border);border-radius:var(--radius-sm);
+    overflow:hidden;position:relative;
+  }
+  .process-card img{width:100%;aspect-ratio:4/5;object-fit:cover;}
+  .process-card .pc-num{
+    position:absolute;top:14px;left:14px;
+    width:34px;height:34px;border-radius:50%;
+    background:rgba(11,11,16,0.75);backdrop-filter:blur(6px);
+    border:1px solid rgba(255,111,176,0.4);color:var(--accent-2);
+    display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.9rem;
+  }
+  .process-card .pc-body{padding:1.1rem 1.2rem 1.3rem;}
+  .process-card .pc-body h3{font-size:1.05rem;margin-bottom:.4rem;}
+  .process-card .pc-body p{font-size:.85rem;color:var(--text-dim);}
+  .process-connector{
+    display:none;
+  }
+  .process-caption{
+    text-align:center;margin-top:1.8rem;color:var(--accent-2);font-size:.85rem;font-style:italic;opacity:.85;
+  }
+
+  /* FEATURED (legacy card style reused for carousel items via .fc-tag) */
+  .fc-tag{
+    position:absolute;top:10px;left:10px;
+    font-size:.65rem;letter-spacing:1px;text-transform:uppercase;font-weight:700;
+    padding:4px 10px;border-radius:999px;
+    background:rgba(11,11,16,0.65);backdrop-filter:blur(6px);
+    border:1px solid var(--border);color:var(--accent-2);
+  }
+
+  /* GALLERY */
+  .gallery-header{max-width:1100px;margin:0 auto 2.2rem;text-align:center;position:relative;z-index:1;}
+  .gallery-header p{color:var(--text-dim);max-width:520px;margin:0 auto;}
+  .gallery{
+    columns:4 260px;column-gap:14px;max-width:1400px;margin:0 auto;position:relative;z-index:1;
+  }
+  .gallery figure{
+    break-inside:avoid;margin:0 0 14px;border-radius:var(--radius-sm);overflow:hidden;
+    position:relative;cursor:pointer;border:1px solid var(--border);
+    background:var(--card);
+    opacity:0;transform:translateY(20px) scale(.98);
+    transition:opacity .5s ease, transform .5s ease, border-color .3s;
+    display:none;
+  }
+  .gallery figure.gvisible{display:block;}
+  .gallery figure.in-view{opacity:1;transform:translateY(0) scale(1);}
+  .gallery figure:hover{border-color:rgba(181,134,255,0.5);}
+  .gallery img{
+    width:100%;display:block;transition:transform .5s ease, filter .5s ease;
+    background:var(--card);
+  }
+  .gallery figure:hover img{transform:scale(1.06);filter:brightness(1.05);}
+  .gallery figure::after{
+    content:'';position:absolute;inset:0;
+    background:linear-gradient(0deg, rgba(0,0,0,0.55) 0%, transparent 35%);
+    opacity:0;transition:opacity .3s;
+  }
+  .gallery figure:hover::after{opacity:1;}
+  .gallery figure .zoom-icon{
+    position:absolute;bottom:12px;right:12px;
+    width:34px;height:34px;border-radius:50%;
+    background:rgba(11,11,16,0.7);backdrop-filter:blur(6px);
+    display:flex;align-items:center;justify-content:center;
+    opacity:0;transform:translateY(6px) scale(.8);transition:.3s;
+    border:1px solid var(--border);
+    font-size:.85rem;z-index:1;
+  }
+  .gallery figure:hover .zoom-icon{opacity:1;transform:translateY(0) scale(1);}
+
+  .gallery-more{text-align:center;margin-top:2.5rem;position:relative;z-index:1;}
+  .gallery-more .btn{margin:0 auto;}
+  .gallery-more .hint{display:block;margin-top:.9rem;color:var(--text-dim);font-size:.8rem;}
+
+  /* PROCESO / VIDEOS */
+  .proceso{max-width:1300px;margin:0 auto;position:relative;z-index:1;}
+  .proceso-header{max-width:1100px;margin:0 auto 2.2rem;text-align:center;}
+  .proceso-header p{color:var(--text-dim);max-width:520px;margin:0 auto;}
+  .video-grid{
+    display:grid;grid-template-columns:repeat(4,1fr);grid-auto-rows:150px;gap:16px;
+  }
+  .video-card{
+    border-radius:var(--radius-sm);overflow:hidden;border:1px solid var(--border);
+    background:var(--card);position:relative;display:flex;flex-direction:column;
+  }
+  .video-card.vc-featured{grid-column:span 2;grid-row:span 2;}
+  .vc-media{position:relative;flex:1;min-height:0;background:#000;}
+  .video-card video{position:absolute;inset:0;width:100%;height:100%;display:block;object-fit:cover;background:#000;}
+  .vc-duration{
+    position:absolute;bottom:10px;right:10px;pointer-events:none;
+    background:rgba(11,11,16,0.75);backdrop-filter:blur(4px);
+    color:#fff;font-size:.72rem;font-weight:600;padding:3px 8px;border-radius:6px;
+  }
+  .vc-tag{
+    position:absolute;top:10px;left:10px;pointer-events:none;
+    font-size:.65rem;letter-spacing:1px;text-transform:uppercase;font-weight:700;
+    padding:4px 10px;border-radius:999px;
+    background:rgba(11,11,16,0.65);color:var(--accent-2);border:1px solid rgba(255,111,176,0.3);
+  }
+  .video-card .vc-label{
+    padding:10px 14px;font-size:.82rem;color:var(--text-dim);
+    display:flex;align-items:center;gap:8px;
+  }
+  .video-card .vc-label .dot{width:6px;height:6px;border-radius:50%;background:var(--accent-2);flex-shrink:0;}
+
+  /* CONTACT */
+  .contact{
+    max-width:760px;margin:0 auto;text-align:center;
+    padding-top:2rem;padding-bottom:3rem;position:relative;z-index:1;
+  }
+  .contact-card{
+    background:var(--card);border:1px solid var(--border);
+    border-radius:var(--radius-lg);padding:4rem 2.5rem;
+    position:relative;overflow:hidden;
+  }
+  .contact-card::before{
+    content:'';position:absolute;width:340px;height:340px;
+    background:radial-gradient(circle, rgba(181,134,255,0.25), transparent 70%);
+    top:-120px;right:-100px;
+    animation:floatOrb 9s ease-in-out infinite alternate;
+  }
+  .contact-card::after{
+    content:'';position:absolute;width:260px;height:260px;
+    background:radial-gradient(circle, rgba(255,111,176,0.18), transparent 70%);
+    bottom:-100px;left:-80px;
+    animation:floatOrb 11s ease-in-out infinite alternate-reverse;
+  }
+  @keyframes floatOrb{
+    0%{transform:translate(0,0);}
+    100%{transform:translate(-16px, 14px);}
+  }
+  .contact-card p{color:var(--text-dim);max-width:440px;margin:1rem auto 2.2rem;position:relative;}
+  .social-row{display:flex;justify-content:center;gap:1rem;position:relative;flex-wrap:wrap;}
+
+  footer{
+    text-align:center;padding:2.5rem 6vw;color:var(--text-dim);font-size:.82rem;
+    border-top:1px solid var(--border);position:relative;z-index:1;
+  }
+  footer .heart{color:var(--accent-2);display:inline-block;animation:pulseHeart 1.6s ease-in-out infinite;}
+  @keyframes pulseHeart{0%,100%{transform:scale(1);}50%{transform:scale(1.25);}}
+
+  /* BACK TO TOP */
+  .to-top{
+    position:fixed;bottom:26px;right:26px;z-index:90;
+    width:46px;height:46px;border-radius:50%;
+    background:rgba(22,22,30,0.85);backdrop-filter:blur(8px);
+    border:1px solid var(--border);color:var(--text);
+    display:flex;align-items:center;justify-content:center;cursor:pointer;
+    font-size:1.1rem;
+    opacity:0;pointer-events:none;transform:translateY(10px);
+    transition:opacity .3s, transform .3s, border-color .3s;
+  }
+  .to-top.show{opacity:1;pointer-events:auto;transform:translateY(0);}
+  .to-top:hover{border-color:var(--accent);color:var(--accent);}
+
+  /* LIGHTBOX */
+  .lightbox{
+    position:fixed;inset:0;z-index:1000;
+    background:rgba(6,6,9,0.94);backdrop-filter:blur(6px);
+    display:none;align-items:center;justify-content:center;
+    padding:5vh 4vw;
+  }
+  .lightbox.active{display:flex;}
+  .lightbox-frame{position:relative;max-width:90vw;max-height:90vh;}
+  .lightbox img{
+    max-height:90vh;max-width:90vw;border-radius:var(--radius-sm);box-shadow:0 30px 80px rgba(0,0,0,0.6);
+    opacity:0;transform:scale(.97);transition:opacity .25s ease, transform .25s ease;
+  }
+  .lightbox img.show{opacity:1;transform:scale(1);}
+  .lightbox-counter{
+    position:absolute;bottom:-34px;left:50%;transform:translateX(-50%);
+    font-size:.78rem;color:var(--text-dim);letter-spacing:1px;
+  }
+  .lightbox-close{
+    position:absolute;top:24px;right:32px;
+    font-size:1.6rem;color:#fff;background:rgba(255,255,255,0.08);
+    width:44px;height:44px;border-radius:50%;border:1px solid var(--border);
+    display:flex;align-items:center;justify-content:center;cursor:pointer;
+  }
+  .lightbox-close:hover{background:rgba(255,255,255,0.16);}
+  .lightbox-nav{
+    position:absolute;top:50%;transform:translateY(-50%);
+    width:48px;height:48px;border-radius:50%;
+    background:rgba(255,255,255,0.08);border:1px solid var(--border);
+    color:#fff;font-size:1.3rem;display:flex;align-items:center;justify-content:center;cursor:pointer;
+  }
+  .lightbox-nav:hover{background:rgba(255,255,255,0.16);}
+  .lb-prev{left:24px;}
+  .lb-next{right:24px;}
+
+  @media (max-width: 980px){
+    .hero{min-height:560px;}
+    .hero-bg-img{object-position:70% 25%;}
+    .hero-scrim{
+      background:linear-gradient(180deg,
+        rgba(11,11,16,0.55) 0%,
+        rgba(11,11,16,0.75) 45%,
+        var(--bg) 92%);
+    }
+    .hero-row{min-height:auto;}
+    .hero-text{max-width:100%;}
+    .about{grid-template-columns:1fr;}
+    .about-portrait{max-width:260px;margin:0 auto;}
+    .process-track{grid-template-columns:1fr;}
+    .gallery{columns:2 200px;}
+    .video-grid{grid-template-columns:repeat(2,1fr);}
+    .video-card.vc-featured{grid-column:span 2;grid-row:span 1;}
+  }
+  @media (max-width: 560px){
+    .video-grid{grid-template-columns:1fr;}
+    .video-card.vc-featured{grid-column:span 1;}
+  }
+  @media (max-width: 640px){
+    nav ul{position:fixed;top:64px;left:0;right:0;bottom:0;background:var(--bg);flex-direction:column;padding:2.5rem 8vw;gap:1.8rem;transform:translateX(100%);transition:transform .3s;}
+    nav ul.open{transform:translateX(0);}
+    .menu-toggle{display:block;}
+    .nav-cta{display:none;}
+    section{padding:4rem 6vw;}
+    .lightbox-nav{width:40px;height:40px;font-size:1.1rem;}
+    .lb-prev{left:8px;}
+    .lb-next{right:8px;}
+    .to-top{width:40px;height:40px;bottom:18px;right:18px;}
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    *{animation-duration:.001ms !important;animation-iteration-count:1 !important;transition-duration:.001ms !important;}
+  }
+</style>
+</head>
+<body>
+
+<header id="siteHeader">
+  <a href="#top" class="brand">Bluinen<span>F</span></a>
+  <nav>
+    <ul id="navList">
+      <li><a href="#sobre-mi" class="nav-link">Sobre mí</a></li>
+      <li><a href="#galeria" class="nav-link">Galería</a></li>
+      <li><a href="#proceso" class="nav-link">Proceso</a></li>
+      <li><a href="#contacto" class="nav-link">Contacto</a></li>
+      <li><a class="nav-cta" href="https://x.com/BluinenF" target="_blank" rel="noopener">Twitter ↗</a></li>
+    </ul>
+  </nav>
+  <button class="menu-toggle" id="menuToggle" aria-label="Abrir menú">☰</button>
+</header>
+
+<section class="hero" id="top">
+  <img src="images/art12.jpg" alt="Ilustración destacada de BluinenF, personaje de anime con aura mágica morada" class="hero-bg-img" id="heroImg">
+  <div class="hero-scrim"></div>
+  <span class="hero-sparkle" style="top:14%;left:58%;animation-delay:.3s;">✦</span>
+  <span class="hero-sparkle" style="bottom:20%;left:68%;animation-delay:1.4s;">✧</span>
+  <div class="hero-row">
+    <div class="hero-text">
+      <span class="eyebrow">Ilustrador digital independiente</span>
+      <h1>BluinenF</h1>
+      <p>Ilustraciones de anime con pasión por el color, la luz y los personajes. Explora mi galería y el proceso detrás de cada obra.</p>
+      <div class="hero-actions">
+        <a href="#galeria" class="btn btn-primary">✨ Ver galería</a>
+        <a href="https://x.com/BluinenF" target="_blank" rel="noopener" class="btn btn-outline">🐦 Seguir en Twitter</a>
+      </div>
+      <div class="scroll-hint-inline"><span class="dot-pulse"></span>Desplaza para descubrir más</div>
+    </div>
+  </div>
+</section>
+
+<section id="sobre-mi">
+  <div class="glow-orb" style="width:420px;height:420px;background:var(--accent);top:-120px;left:-160px;"></div>
+  <div class="about reveal">
+    <div class="about-portrait">
+      <img src="images/art23.jpg" alt="Retrato ilustrado de BluinenF" loading="lazy">
+    </div>
+    <div class="about-text">
+      <div class="section-tag">Sobre mí</div>
+      <h2 class="section-title">Aprendiendo a dibujar, un <span class="hl">trazo</span> a la vez</h2>
+      <p>Soy <strong>BluinenF</strong>, un ilustrador independiente recién empezando este camino. Me gusta dibujar personajes de anime y manga, explorar distintos estilos y mejorar con cada pieza nueva.</p>
+      <p>Esta página reúne parte de mi trabajo hasta ahora: bocetos, ilustraciones a color y piezas experimentales mientras sigo aprendiendo y creciendo como artista.</p>
+      <div class="stats">
+        <div class="stat"><div class="stat-icon">🎨</div><div><b>50+</b><span>Ilustraciones</span></div></div>
+        <div class="stat"><div class="stat-icon">📅</div><div><b>2026</b><span>En constante práctica</span></div></div>
+        <div class="stat"><div class="stat-icon">✦</div><div><b>∞</b><span>Ganas de mejorar</span></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="process-demo reveal">
+    <div class="process-demo-head">
+      <div>
+        <div class="section-tag">Speedpaints</div>
+        <h2 class="section-title" style="margin-bottom:.4rem;">Del boceto al <span class="hl">color</span></h2>
+        <p>Así es como una idea en mi cabeza se convierte en una ilustración, desde el boceto inicial hasta el color final.</p>
+      </div>
+      <a href="#proceso" class="btn btn-outline">▶ Ver speedpaint (1:00)</a>
+    </div>
+    <div class="process-track">
+      <div class="process-card">
+        <span class="pc-num">01</span>
+        <img src="images/process-boceto.jpg" alt="Etapa de boceto" loading="lazy">
+        <div class="pc-body">
+          <h3>Boceto</h3>
+          <p>La idea toma forma con líneas sueltas y muchas dudas.</p>
+        </div>
+      </div>
+      <div class="process-card">
+        <span class="pc-num">02</span>
+        <img src="images/process-lineart.jpg" alt="Etapa de lineart" loading="lazy">
+        <div class="pc-body">
+          <h3>Lineart</h3>
+          <p>Defino los contornos y detalles para dar claridad a la obra.</p>
+        </div>
+      </div>
+      <div class="process-card">
+        <span class="pc-num">03</span>
+        <img src="images/process-colorfinal.jpg" alt="Etapa de color final" loading="lazy">
+        <div class="pc-body">
+          <h3>Color final</h3>
+          <p>Luz, color y ambiente para darle vida a la ilustración.</p>
+        </div>
+      </div>
+    </div>
+    <p class="process-caption">✧ Siempre hay algo nuevo por aprender ✧</p>
+  </div>
+</section>
+
+<div class="hero-carousel-wrap">
+  <div class="hero-carousel">
+    <div class="hero-carousel-header">
+      <div class="section-tag">✦ Obras destacadas</div>
+      <div class="carousel-nav">
+        <button class="carousel-arrow" id="carPrev" aria-label="Anterior">‹</button>
+        <button class="carousel-arrow" id="carNext" aria-label="Siguiente">›</button>
+      </div>
+    </div>
+    <div class="carousel-track" id="carouselTrack"></div>
+  </div>
+</div>
+
+<section id="galeria">
+  <div class="gallery-header reveal">
+    <div class="section-tag" style="justify-content:center;">Portfolio</div>
+    <h2 class="section-title">Galería</h2>
+    <p>Una selección de dibujos e ilustraciones. Haz clic en cualquiera para verlo en grande.</p>
+  </div>
+  <div class="filter-tabs reveal" id="filterTabs">
+    <button class="filter-tab active" data-filter="destacadas">✨ Destacadas</button>
+    <button class="filter-tab" data-filter="color">🎨 Color</button>
+    <button class="filter-tab" data-filter="boceto">✏️ Bocetos</button>
+    <button class="filter-tab" data-filter="personajes">👤 Personajes</button>
+  </div>
+  <div class="gallery" id="gallery"></div>
+  <div class="gallery-more">
+    <button class="btn btn-outline" id="galleryToggle">✨ Ver todas las ilustraciones</button>
+    <span class="hint" id="galleryHint"></span>
+  </div>
+</section>
+
+<section id="proceso">
+  <div class="glow-orb" style="width:340px;height:340px;background:var(--accent);bottom:-100px;left:-140px;"></div>
+  <div class="proceso">
+    <div class="proceso-header reveal">
+      <div class="section-tag" style="justify-content:center;">Speedpaints</div>
+      <h2 class="section-title">Mira cómo nacen las <span class="hl">ilustraciones</span></h2>
+      <p>Procesos completos de dibujo, del primer trazo al resultado final.</p>
+    </div>
+    <div class="video-grid reveal" id="videoGrid"></div>
+  </div>
+</section>
+
+<section id="contacto">
+  <div class="contact reveal">
+    <div class="contact-card">
+      <div class="section-tag" style="justify-content:center;">Contacto</div>
+      <h2 class="section-title">¿Hablamos?</h2>
+      <p>Para comisiones, colaboraciones o simplemente para seguir el progreso, la mejor forma de contactarme es por Twitter.</p>
+      <div class="social-row">
+        <a href="https://x.com/BluinenF" target="_blank" rel="noopener" class="btn btn-primary">🐦 Twitter / X — @BluinenF</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <p>© 2026 BluinenF — Hecho con <span class="heart">♥</span> para compartir arte.</p>
+</footer>
+
+<button class="to-top" id="toTop" aria-label="Volver arriba">↑</button>
+
+<div class="lightbox" id="lightbox">
+  <div class="lightbox-frame">
+    <div class="lightbox-close" id="lbClose">✕</div>
+    <div class="lightbox-nav lb-prev" id="lbPrev">‹</div>
+    <img id="lbImg" src="" alt="Ilustración ampliada">
+    <div class="lightbox-nav lb-next" id="lbNext">›</div>
+    <div class="lightbox-counter" id="lbCounter"></div>
+  </div>
+</div>
+
+<script>
+  const TOTAL_IMAGES = 50;
+  const images = [];
+  for(let i=1;i<=TOTAL_IMAGES;i++){
+    const n = String(i).padStart(2,'0');
+    images.push(`images/art${n}.jpg`);
+  }
+
+  // Categorías reales por ilustración (índice 0 = art01 ... índice 49 = art50)
+  const CATS = [
+    ['color','destacadas'],['color'],['color'],['color','destacadas'],['color'],
+    ['color'],['color'],['color'],['color','destacadas'],['boceto'],
+    ['color'],['color','personajes','destacadas'],['color'],['color'],['color'],
+    ['boceto'],['color','destacadas'],['color','personajes'],['color','personajes'],['boceto'],
+    ['boceto'],['boceto'],['color','personajes'],['color'],['color','personajes'],
+    ['boceto'],['boceto'],['color'],['color'],['color','personajes'],
+    ['color','personajes'],['color'],['color','personajes'],['color','personajes'],['boceto','personajes'],
+    ['color','personajes'],['color','personajes'],['color','personajes'],['color','personajes'],['color'],
+    ['color','personajes'],['boceto','personajes'],['color'],['color','destacadas'],['color'],
+    ['color','personajes'],['color','personajes'],['color'],['color','personajes'],['color','personajes']
+  ];
+
+  // ===== Hero carousel (destacadas) =====
+  const destacadaIdx = CATS.reduce((acc,c,i) => { if(c.includes('destacadas')) acc.push(i); return acc; }, []);
+  const carouselTrack = document.getElementById('carouselTrack');
+  destacadaIdx.forEach(idx => {
+    const item = document.createElement('div');
+    item.className = 'carousel-item';
+    item.dataset.index = idx;
+    item.innerHTML = `<img src="${images[idx]}" alt="Obra destacada de BluinenF" loading="lazy">`;
+    carouselTrack.appendChild(item);
+  });
+  carouselTrack.addEventListener('click', e => {
+    const item = e.target.closest('.carousel-item');
+    if(item) openLightbox(parseInt(item.dataset.index));
+  });
+  document.getElementById('carPrev').addEventListener('click', () => carouselTrack.scrollBy({left:-190, behavior:'smooth'}));
+  document.getElementById('carNext').addEventListener('click', () => carouselTrack.scrollBy({left:190, behavior:'smooth'}));
+
+  // ===== Video grid (speedpaints) =====
+  // sp05 primero (coincide con la demo "Del boceto al color"), luego el resto
+  const VIDEO_ORDER = [5,1,2,3,4,6,7,8,9,10];
+  const videoGrid = document.getElementById('videoGrid');
+  VIDEO_ORDER.forEach((num, i) => {
+    const n = String(num).padStart(2,'0');
+    const card = document.createElement('div');
+    card.className = 'video-card' + (i === 0 ? ' vc-featured' : '');
+    card.innerHTML = `
+      <div class="vc-media">
+        <video controls preload="none" poster="videos/sp${n}_poster.jpg" playsinline>
+          <source src="videos/sp${n}.mp4" type="video/mp4">
+        </video>
+        ${i === 0 ? '<span class="vc-tag">Proceso completo</span>' : ''}
+        <span class="vc-duration">1:00</span>
+      </div>
+      <div class="vc-label"><span class="dot"></span>Speedpaint ${n}</div>
+    `;
+    videoGrid.appendChild(card);
+  });
+
+  // ===== Gallery with filter tabs =====
+  const gallery = document.getElementById('gallery');
+  const INITIAL_VISIBLE = 18;
+  let currentFilter = 'destacadas';
+  let expanded = false;
+
+  images.forEach((src, idx) => {
+    const fig = document.createElement('figure');
+    fig.dataset.index = idx;
+    fig.dataset.cats = CATS[idx].join(' ');
+    fig.innerHTML = `
+      <img src="${src}" alt="Ilustración ${idx+1} de BluinenF" loading="lazy">
+      <div class="zoom-icon">🔍</div>
+    `;
+    gallery.appendChild(fig);
+  });
+
+  const galleryToggle = document.getElementById('galleryToggle');
+  const galleryHint = document.getElementById('galleryHint');
+  const filterTabs = document.querySelectorAll('.filter-tab');
+  const allFigures = Array.from(gallery.querySelectorAll('figure'));
+
+  function renderGallery(){
+    const matching = allFigures.filter(f => f.dataset.cats.split(' ').includes(currentFilter));
+    const visibleCount = expanded ? matching.length : Math.min(INITIAL_VISIBLE, matching.length);
+
+    allFigures.forEach(f => {
+      f.classList.remove('gvisible');
+      const img = f.querySelector('img');
+      if(img.dataset.loaded !== '1'){ /* already has src via loading=lazy */ }
+    });
+    matching.slice(0, visibleCount).forEach(f => {
+      f.classList.add('gvisible');
+      requestAnimationFrame(() => f.classList.add('in-view'));
+    });
+
+    if(matching.length > INITIAL_VISIBLE){
+      galleryToggle.style.display = 'inline-flex';
+      galleryToggle.textContent = expanded ? '— Mostrar menos' : `✨ Ver todas (+${matching.length - INITIAL_VISIBLE})`;
+      galleryHint.textContent = `Mostrando ${visibleCount} de ${matching.length}`;
+    } else {
+      galleryToggle.style.display = 'none';
+      galleryHint.textContent = `Mostrando ${matching.length} de ${matching.length}`;
+    }
+  }
+
+  filterTabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      filterTabs.forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      currentFilter = tab.dataset.filter;
+      expanded = false;
+      renderGallery();
+    });
+  });
+
+  galleryToggle.addEventListener('click', () => {
+    expanded = !expanded;
+    renderGallery();
+    if(!expanded){
+      document.getElementById('galeria').scrollIntoView({behavior:'smooth', block:'start'});
+    }
+  });
+
+  renderGallery();
+
+  // ===== Lightbox =====
+  const lb = document.getElementById('lightbox');
+  const lbImg = document.getElementById('lbImg');
+  const lbCounter = document.getElementById('lbCounter');
+  let current = 0;
+
+  function setLbImage(){
+    lbImg.classList.remove('show');
+    setTimeout(() => {
+      lbImg.src = images[current];
+      lbCounter.textContent = `${current+1} / ${images.length}`;
+    }, 120);
+  }
+  lbImg.addEventListener('load', () => requestAnimationFrame(() => lbImg.classList.add('show')));
+
+  function openLightbox(i){
+    current = i;
+    lb.classList.add('active');
+    document.body.style.overflow = 'hidden';
+    lbImg.classList.remove('show');
+    lbImg.src = images[current];
+    lbCounter.textContent = `${current+1} / ${images.length}`;
+  }
+  function closeLightbox(){
+    lb.classList.remove('active');
+    document.body.style.overflow = '';
+  }
+  function navLb(delta){
+    current = (current + delta + images.length) % images.length;
+    setLbImage();
+  }
+
+  gallery.addEventListener('click', e => {
+    const fig = e.target.closest('figure');
+    if(fig) openLightbox(parseInt(fig.dataset.index));
+  });
+  document.getElementById('lbClose').addEventListener('click', closeLightbox);
+  document.getElementById('lbPrev').addEventListener('click', () => navLb(-1));
+  document.getElementById('lbNext').addEventListener('click', () => navLb(1));
+  lb.addEventListener('click', e => { if(e.target === lb) closeLightbox(); });
+  document.addEventListener('keydown', e => {
+    if(!lb.classList.contains('active')) return;
+    if(e.key === 'Escape') closeLightbox();
+    if(e.key === 'ArrowLeft') navLb(-1);
+    if(e.key === 'ArrowRight') navLb(1);
+  });
+
+  let touchStartX = 0;
+  lb.addEventListener('touchstart', e => { touchStartX = e.changedTouches[0].screenX; }, {passive:true});
+  lb.addEventListener('touchend', e => {
+    const dx = e.changedTouches[0].screenX - touchStartX;
+    if(Math.abs(dx) > 50) navLb(dx > 0 ? -1 : 1);
+  }, {passive:true});
+
+  // ===== Mobile menu =====
+  const menuToggle = document.getElementById('menuToggle');
+  const navList = document.getElementById('navList');
+  menuToggle.addEventListener('click', () => navList.classList.toggle('open'));
+  navList.querySelectorAll('a').forEach(a => a.addEventListener('click', () => navList.classList.remove('open')));
+
+  // ===== Header scroll state + back to top =====
+  const header = document.getElementById('siteHeader');
+  const toTop = document.getElementById('toTop');
+  window.addEventListener('scroll', () => {
+    const y = window.scrollY;
+    header.classList.toggle('scrolled', y > 40);
+    toTop.classList.toggle('show', y > 700);
+  });
+  toTop.addEventListener('click', () => window.scrollTo({top:0, behavior:'smooth'}));
+
+  // ===== Active nav link on scroll =====
+  const navLinks = document.querySelectorAll('.nav-link');
+  const sections = ['sobre-mi','galeria','proceso','contacto'].map(id => document.getElementById(id));
+  const sectionObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if(entry.isIntersecting){
+        navLinks.forEach(l => l.classList.remove('active-link'));
+        const match = document.querySelector(`.nav-link[href="#${entry.target.id}"]`);
+        if(match) match.classList.add('active-link');
+      }
+    });
+  }, {rootMargin:'-45% 0px -50% 0px'});
+  sections.forEach(s => s && sectionObserver.observe(s));
+
+  // ===== Reveal on scroll =====
+  const revealTargets = document.querySelectorAll('.reveal');
+  const revealObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if(entry.isIntersecting){
+        entry.target.classList.add('in-view');
+        revealObserver.unobserve(entry.target);
+      }
+    });
+  }, {threshold:.1});
+  revealTargets.forEach(t => revealObserver.observe(t));
+</script>
+
+</body>
+</html>
