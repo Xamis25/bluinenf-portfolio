@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Panel de administración — BluinenF</title>
+<meta name="robots" content="noindex, nofollow">
+<style>
+  :root{
+    --bg:#0b0b10; --card:#16161e; --card-2:#1c1c26; --text:#ece9f2; --text-dim:#aca6c1;
+    --accent:#b586ff; --accent-2:#ff6fb0; --border:rgba(255,255,255,0.1);
+    --danger:#ff6b6b; --ok:#5ed6a6;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;background:var(--bg);color:var(--text);
+    font-family:'Inter',system-ui,sans-serif;line-height:1.5;
+  }
+  a{color:var(--accent);}
+  h1,h2,h3{font-family:'Space Grotesk','Inter',sans-serif;margin:0 0 .5rem;}
+  input,textarea,button{font-family:inherit;font-size:.95rem;}
+  input[type=text],input[type=password],textarea{
+    width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--border);
+    background:var(--card-2);color:var(--text);
+  }
+  textarea{resize:vertical;min-height:80px;}
+  button{
+    cursor:pointer;border:1px solid var(--border);background:rgba(255,255,255,0.04);
+    color:var(--text);padding:9px 16px;border-radius:999px;transition:.15s;
+  }
+  button:hover{border-color:var(--accent);}
+  button.primary{background:linear-gradient(120deg,var(--accent),var(--accent-2));color:#0b0b10;border:none;font-weight:600;}
+  button.primary:hover{opacity:.92;}
+  button.danger{border-color:rgba(255,107,107,0.4);color:var(--danger);background:rgba(255,107,107,0.06);}
+  button:disabled{opacity:.5;cursor:not-allowed;}
+  .hidden{display:none !important;}
+
+  /* LOGIN */
+  #loginScreen{
+    min-height:100vh;display:flex;align-items:center;justify-content:center;padding:2rem;
+  }
+  .login-card{
+    max-width:440px;width:100%;background:var(--card);border:1px solid var(--border);
+    border-radius:20px;padding:2.2rem;
+  }
+  .login-card p{color:var(--text-dim);font-size:.9rem;margin:.6rem 0 1.2rem;}
+  .login-card label{display:block;font-size:.82rem;color:var(--text-dim);margin-bottom:.4rem;}
+  #tokenInput{margin-bottom:1rem;}
+  #loginError{color:var(--danger);font-size:.85rem;margin-top:.8rem;display:none;}
+  .login-help{margin-top:1.4rem;padding-top:1.2rem;border-top:1px solid var(--border);font-size:.82rem;color:var(--text-dim);}
+
+  /* DASHBOARD */
+  header.top{
+    display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.8rem;
+    padding:1.2rem 1.6rem;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--bg);z-index:10;
+  }
+  .status-pill{font-size:.78rem;color:var(--ok);display:flex;align-items:center;gap:6px;}
+  .tabs{display:flex;gap:.5rem;padding:1.2rem 1.6rem 0;flex-wrap:wrap;}
+  .tabs button{background:transparent;}
+  .tabs button.active{background:rgba(181,134,255,0.14);border-color:var(--accent);color:var(--accent);}
+  main{max-width:1100px;margin:0 auto;padding:1.6rem;}
+  .panel{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:1.6rem;margin-bottom:1.2rem;}
+  .field{margin-bottom:1.1rem;}
+  .field label{display:block;font-size:.82rem;color:var(--text-dim);margin-bottom:.4rem;}
+  .row{display:flex;gap:1rem;flex-wrap:wrap;}
+  .row > *{flex:1 1 200px;}
+
+  .avatar-preview{width:96px;height:96px;border-radius:50%;object-fit:cover;border:2px solid var(--border);}
+  .stat-row{display:flex;gap:.6rem;margin-bottom:.6rem;align-items:center;}
+  .stat-row input{flex:1;}
+  .stat-row input:first-child{flex:0 0 60px;}
+
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:14px;}
+  .item-card{background:var(--card-2);border:1px solid var(--border);border-radius:12px;overflow:hidden;position:relative;}
+  .item-card img{width:100%;aspect-ratio:1;object-fit:cover;display:block;}
+  .item-card.wide img{aspect-ratio:16/9;}
+  .item-body{padding:10px;}
+  .cats{display:flex;flex-wrap:wrap;gap:6px;margin:.5rem 0;}
+  .cats label{display:flex;align-items:center;gap:4px;font-size:.72rem;color:var(--text-dim);background:rgba(255,255,255,0.04);padding:3px 8px;border-radius:999px;cursor:pointer;}
+  .cats input{width:auto;}
+  .item-actions{display:flex;justify-content:space-between;align-items:center;gap:6px;margin-top:.4rem;}
+  .item-actions .order-btns{display:flex;gap:4px;}
+  .item-actions button{padding:5px 9px;font-size:.85rem;}
+  .marked-delete{opacity:.35;}
+  .marked-delete .item-body::after{content:'Se borrará al guardar';display:block;color:var(--danger);font-size:.7rem;margin-top:4px;}
+
+  .upload-box{
+    border:1.5px dashed var(--border);border-radius:12px;padding:1.2rem;text-align:center;color:var(--text-dim);
+    font-size:.85rem;margin-top:1rem;
+  }
+  .upload-box input{margin-top:.6rem;}
+
+  .savebar{
+    position:sticky;bottom:0;display:flex;align-items:center;justify-content:space-between;gap:1rem;
+    padding:1rem 1.6rem;background:rgba(11,11,16,0.92);backdrop-filter:blur(10px);border-top:1px solid var(--border);
+    flex-wrap:wrap;
+  }
+  #saveStatus{font-size:.85rem;color:var(--text-dim);}
+  #saveStatus.err{color:var(--danger);}
+  #saveStatus.ok{color:var(--ok);}
+</style>
+</head>
+<body>
+
+<div id="loginScreen">
+  <div class="login-card">
+    <h1>Panel de BluinenF</h1>
+    <p>Pegá tu token de GitHub para poder editar el sitio (perfil, galería, speedpaints). El token se guarda solo en este navegador, nunca se envía a otro lado más que a GitHub.</p>
+    <label for="tokenInput">Token de acceso</label>
+    <input type="password" id="tokenInput" placeholder="github_pat_xxxxxxxxxxxx" autocomplete="off">
+    <button class="primary" id="connectBtn" style="width:100%;margin-top:.4rem;">Conectar</button>
+    <p id="loginError"></p>
+    <div class="login-help">
+      ¿No tenés un token todavía? Pedile a Ricardo la guía para generarlo — es un paso único de un par de minutos en la web de GitHub.
+    </div>
+  </div>
+</div>
+
+<div id="dashboard" class="hidden">
+  <header class="top">
+    <h1 style="font-size:1.2rem;">Panel de BluinenF</h1>
+    <div style="display:flex;align-items:center;gap:1rem;">
+      <span class="status-pill" id="statusPill">● conectado</span>
+      <button id="logoutBtn">Cerrar sesión</button>
+    </div>
+  </header>
+
+  <nav class="tabs">
+    <button data-tab="perfil" class="active">Perfil</button>
+    <button data-tab="galeria">Galería</button>
+    <button data-tab="speedpaints">Speedpaints</button>
+    <button data-tab="proceso">Proceso</button>
+  </nav>
+
+  <main>
+    <section id="tab-perfil" class="panel">
+      <h2>Perfil</h2>
+      <div class="field">
+        <label>Foto de perfil</label><br>
+        <img id="avatarPreview" class="avatar-preview" alt="Avatar actual">
+        <input type="file" id="avatarInput" accept="image/*" style="margin-top:.6rem;">
+      </div>
+      <div class="field">
+        <label for="taglineInput">Frase corta (arriba del nombre, ej. "Artista digital independiente")</label>
+        <input type="text" id="taglineInput">
+      </div>
+      <div class="field">
+        <label for="heroDescInput">Descripción corta (debajo del nombre, en la portada)</label>
+        <textarea id="heroDescInput"></textarea>
+      </div>
+      <div class="field">
+        <label for="bioInput">Sobre mí (un párrafo por línea)</label>
+        <textarea id="bioInput" style="min-height:130px;"></textarea>
+      </div>
+      <div class="field">
+        <label>Estadísticas (ícono, valor, texto)</label>
+        <div id="statsRows"></div>
+        <button id="addStatBtn" type="button">+ Agregar estadística</button>
+      </div>
+      <div class="field">
+        <label for="twitterInput">Usuario de Twitter / X (sin @)</label>
+        <input type="text" id="twitterInput" placeholder="BluinenF">
+      </div>
+    </section>
+
+    <section id="tab-galeria" class="panel hidden">
+      <h2>Galería</h2>
+      <p style="color:var(--text-dim);font-size:.85rem;">Marcá las categorías de cada ilustración y borrá las que no quieras más. Los cambios se aplican recién al guardar.</p>
+      <div class="grid" id="galeriaGrid"></div>
+      <div class="upload-box">
+        Subir nuevas ilustraciones (podés elegir varias a la vez)
+        <br><input type="file" id="galeriaUpload" accept="image/*" multiple>
+      </div>
+    </section>
+
+    <section id="tab-speedpaints" class="panel hidden">
+      <h2>Speedpaints</h2>
+      <p style="color:var(--text-dim);font-size:.85rem;">El primero de la lista es el que se muestra por defecto en "Proceso completo". Usá las flechas para reordenar.</p>
+      <div class="grid" id="speedpaintsGrid"></div>
+      <div class="upload-box">
+        Agregar speedpaint nuevo
+        <div class="row" style="margin-top:.6rem;">
+          <div class="field" style="margin:0;">
+            <label>Título</label>
+            <input type="text" id="newSpTitle" placeholder="Speedpaint 11">
+          </div>
+        </div>
+        <div class="row" style="margin-top:.6rem;">
+          <div>
+            <label style="display:block;font-size:.8rem;color:var(--text-dim);">Video (mp4)</label>
+            <input type="file" id="newSpVideo" accept="video/mp4">
+          </div>
+          <div>
+            <label style="display:block;font-size:.8rem;color:var(--text-dim);">Miniatura (imagen)</label>
+            <input type="file" id="newSpPoster" accept="image/*">
+          </div>
+        </div>
+        <button id="addSpBtn" type="button" style="margin-top:.8rem;">+ Agregar a la lista</button>
+      </div>
+    </section>
+
+    <section id="tab-proceso" class="panel hidden">
+      <h2>Del boceto al color</h2>
+      <div id="procesoRows"></div>
+    </section>
+  </main>
+
+  <div class="savebar">
+    <span id="saveStatus"></span>
+    <button class="primary" id="saveBtn">💾 Guardar y publicar cambios</button>
+  </div>
+</div>
+
+<script>
+  const OWNER = 'Xamis25';
+  const REPO = 'bluinenf-portfolio';
+  const BRANCH = 'main';
+  const CONTENT_PATH = 'data/content.json';
+  const API = `https://api.github.com/repos/${OWNER}/${REPO}`;
+
+  let TOKEN = localStorage.getItem('bluinenf_admin_token') || '';
+  let contentData = null;
+  let contentSha = null;
+
+  // archivos nuevos a subir y paths a borrar; se aplican recién al guardar
+  let pendingUploads = []; // {path, base64, contentType}
+  let pendingDeletes = []; // path
+
+  function escapeHtml(s){
+    return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  async function ghFetch(path, opts={}){
+    const res = await fetch(`${API}${path}`, {
+      ...opts,
+      headers:{
+        'Authorization': `Bearer ${TOKEN}`,
+        'Accept': 'application/vnd.github+json',
+        ...(opts.headers||{})
+      }
+    });
+    return res;
+  }
+
+  function fileToBase64(file){
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result.split(',')[1]);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function extOf(filename){
+    const m = /\.([a-zA-Z0-9]+)$/.exec(filename || '');
+    return m ? m[1].toLowerCase() : 'jpg';
+  }
+
+  // ===== Login =====
+  async function tryConnect(token){
+    TOKEN = token;
+    const res = await ghFetch('');
+    if(!res.ok) throw new Error(res.status === 401 ? 'Token inválido o vencido.' : `No se pudo conectar (${res.status}). Revisá que el token tenga permiso sobre este repositorio.`);
+    localStorage.setItem('bluinenf_admin_token', token);
+    await loadContent();
+    document.getElementById('loginScreen').classList.add('hidden');
+    document.getElementById('dashboard').classList.remove('hidden');
+  }
+
+  document.getElementById('connectBtn').addEventListener('click', async () => {
+    const btn = document.getElementById('connectBtn');
+    const err = document.getElementById('loginError');
+    const token = document.getElementById('tokenInput').value.trim();
+    err.style.display = 'none';
+    if(!token) return;
+    btn.disabled = true; btn.textContent = 'Conectando…';
+    try{
+      await tryConnect(token);
+    }catch(e){
+      err.textContent = e.message;
+      err.style.display = 'block';
+    }
+    btn.disabled = false; btn.textContent = 'Conectar';
+  });
+
+  document.getElementById('logoutBtn').addEventListener('click', () => {
+    localStorage.removeItem('bluinenf_admin_token');
+    location.reload();
+  });
+
+  // ===== Cargar contenido actual =====
+  async function loadContent(){
+    const res = await ghFetch(`/contents/${CONTENT_PATH}?ref=${BRANCH}`);
+    if(!res.ok) throw new Error('No se pudo leer data/content.json');
+    const data = await res.json();
+    contentSha = data.sha;
+    contentData = JSON.parse(decodeURIComponent(escape(atob(data.content))));
+    pendingUploads = [];
+    pendingDeletes = [];
+    renderAll();
+  }
+
+  function renderAll(){
+    renderPerfil();
+    renderGaleria();
+    renderSpeedpaints();
+    renderProceso();
+  }
+
+  // ===== Tabs =====
+  document.querySelectorAll('.tabs button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tabs button').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      document.querySelectorAll('main .panel').forEach(p => p.classList.add('hidden'));
+      document.getElementById('tab-' + btn.dataset.tab).classList.remove('hidden');
+    });
+  });
+
+  // ===== Perfil =====
+  function renderPerfil(){
+    const p = contentData.profile || {};
+    document.getElementById('avatarPreview').src = '../' + p.avatar;
+    document.getElementById('taglineInput').value = p.tagline || '';
+    document.getElementById('heroDescInput').value = p.heroDesc || '';
+    document.getElementById('bioInput').value = (p.aboutParagraphs || []).join('\n');
+    document.getElementById('twitterInput').value = p.twitter || '';
+    renderStatRows(p.stats || []);
+  }
+  function renderStatRows(stats){
+    const wrap = document.getElementById('statsRows');
+    wrap.innerHTML = '';
+    stats.forEach((s, i) => {
+      const row = document.createElement('div');
+      row.className = 'stat-row';
+      row.innerHTML = `
+        <input type="text" value="${escapeHtml(s.icon)}" data-stat="icon" data-i="${i}" placeholder="🎨">
+        <input type="text" value="${escapeHtml(s.value)}" data-stat="value" data-i="${i}" placeholder="50+">
+        <input type="text" value="${escapeHtml(s.label)}" data-stat="label" data-i="${i}" placeholder="Ilustraciones">
+        <button type="button" data-remove-stat="${i}">✕</button>
+      `;
+      wrap.appendChild(row);
+    });
+    wrap.querySelectorAll('[data-remove-stat]').forEach(b => {
+      b.addEventListener('click', () => {
+        stats.splice(parseInt(b.dataset.removeStat), 1);
+        renderStatRows(stats);
+      });
+    });
+  }
+  document.getElementById('addStatBtn').addEventListener('click', () => {
+    const stats = contentData.profile.stats;
+    stats.push({icon:'✦', value:'', label:''});
+    renderStatRows(stats);
+  });
+  document.getElementById('avatarInput').addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if(!file) return;
+    const base64 = await fileToBase64(file);
+    const path = `images/avatar_${Date.now()}.${extOf(file.name)}`;
+    pendingUploads.push({path, base64, contentType: file.type});
+    contentData.profile.avatar = path;
+    document.getElementById('avatarPreview').src = URL.createObjectURL(file);
+  });
+
+  function collectPerfil(){
+    const p = contentData.profile;
+    p.tagline = document.getElementById('taglineInput').value.trim();
+    p.heroDesc = document.getElementById('heroDescInput').value.trim();
+    p.aboutParagraphs = document.getElementById('bioInput').value.split('\n').map(s => s.trim()).filter(Boolean);
+    p.twitter = document.getElementById('twitterInput').value.trim().replace(/^@/, '');
+    document.querySelectorAll('#statsRows [data-stat]').forEach(inp => {
+      const i = parseInt(inp.dataset.i);
+      p.stats[i][inp.dataset.stat] = inp.value.trim();
+    });
+  }
+
+  // ===== Galería =====
+  const CATEGORY_OPTIONS = ['color','boceto','personajes','destacadas'];
+  function renderGaleria(){
+    const wrap = document.getElementById('galeriaGrid');
+    wrap.innerHTML = '';
+    contentData.gallery.forEach((item, i) => {
+      const card = document.createElement('div');
+      card.className = 'item-card' + (item._delete ? ' marked-delete' : '');
+      const cats = CATEGORY_OPTIONS.map(c => `
+        <label><input type="checkbox" data-cat="${c}" data-i="${i}" ${item.categories.includes(c) ? 'checked' : ''}>${c}</label>
+      `).join('');
+      card.innerHTML = `
+        <img src="../${item.file}" loading="lazy">
+        <div class="item-body">
+          <div class="cats">${cats}</div>
+          <div class="item-actions">
+            <span></span>
+            <button type="button" data-del-gallery="${i}" class="danger">${item._delete ? 'Deshacer' : '🗑 Borrar'}</button>
+          </div>
+        </div>
+      `;
+      wrap.appendChild(card);
+    });
+    wrap.querySelectorAll('[data-cat]').forEach(cb => {
+      cb.addEventListener('change', () => {
+        const i = parseInt(cb.dataset.i);
+        const cat = cb.dataset.cat;
+        const item = contentData.gallery[i];
+        if(cb.checked){ if(!item.categories.includes(cat)) item.categories.push(cat); }
+        else { item.categories = item.categories.filter(c => c !== cat); }
+      });
+    });
+    wrap.querySelectorAll('[data-del-gallery]').forEach(b => {
+      b.addEventListener('click', () => {
+        const i = parseInt(b.dataset.delGallery);
+        contentData.gallery[i]._delete = !contentData.gallery[i]._delete;
+        renderGaleria();
+      });
+    });
+  }
+  document.getElementById('galeriaUpload').addEventListener('change', async (e) => {
+    const files = Array.from(e.target.files);
+    for(let idx = 0; idx < files.length; idx++){
+      const file = files[idx];
+      const base64 = await fileToBase64(file);
+      const path = `images/img_${Date.now()}_${idx}.${extOf(file.name)}`;
+      pendingUploads.push({path, base64, contentType: file.type});
+      contentData.gallery.push({file: path, categories: ['color']});
+    }
+    e.target.value = '';
+    renderGaleria();
+  });
+
+  // ===== Speedpaints =====
+  function renderSpeedpaints(){
+    const wrap = document.getElementById('speedpaintsGrid');
+    wrap.innerHTML = '';
+    contentData.speedpaints.forEach((sp, i) => {
+      const card = document.createElement('div');
+      card.className = 'item-card wide' + (sp._delete ? ' marked-delete' : '');
+      card.innerHTML = `
+        <img src="../${sp.poster}" loading="lazy">
+        <div class="item-body">
+          <input type="text" value="${escapeHtml(sp.title)}" data-sp-title="${i}" style="margin-bottom:.5rem;">
+          <div class="item-actions">
+            <div class="order-btns">
+              <button type="button" data-sp-up="${i}" ${i===0?'disabled':''}>↑</button>
+              <button type="button" data-sp-down="${i}" ${i===contentData.speedpaints.length-1?'disabled':''}>↓</button>
+            </div>
+            <button type="button" data-del-sp="${i}" class="danger">${sp._delete ? 'Deshacer' : '🗑 Borrar'}</button>
+          </div>
+        </div>
+      `;
+      wrap.appendChild(card);
+    });
+    wrap.querySelectorAll('[data-sp-title]').forEach(inp => {
+      inp.addEventListener('input', () => {
+        contentData.speedpaints[parseInt(inp.dataset.spTitle)].title = inp.value;
+      });
+    });
+    wrap.querySelectorAll('[data-sp-up]').forEach(b => {
+      b.addEventListener('click', () => {
+        const i = parseInt(b.dataset.spUp);
+        [contentData.speedpaints[i-1], contentData.speedpaints[i]] = [contentData.speedpaints[i], contentData.speedpaints[i-1]];
+        renderSpeedpaints();
+      });
+    });
+    wrap.querySelectorAll('[data-sp-down]').forEach(b => {
+      b.addEventListener('click', () => {
+        const i = parseInt(b.dataset.spDown);
+        [contentData.speedpaints[i+1], contentData.speedpaints[i]] = [contentData.speedpaints[i], contentData.speedpaints[i+1]];
+        renderSpeedpaints();
+      });
+    });
+    wrap.querySelectorAll('[data-del-sp]').forEach(b => {
+      b.addEventListener('click', () => {
+        const i = parseInt(b.dataset.delSp);
+        contentData.speedpaints[i]._delete = !contentData.speedpaints[i]._delete;
+        renderSpeedpaints();
+      });
+    });
+  }
+  document.getElementById('addSpBtn').addEventListener('click', async () => {
+    const title = document.getElementById('newSpTitle').value.trim();
+    const videoFile = document.getElementById('newSpVideo').files[0];
+    const posterFile = document.getElementById('newSpPoster').files[0];
+    if(!title || !videoFile || !posterFile){
+      alert('Completá título, video y miniatura antes de agregar.');
+      return;
+    }
+    const ts = Date.now();
+    const videoPath = `videos/sp_${ts}.${extOf(videoFile.name) || 'mp4'}`;
+    const posterPath = `videos/sp_${ts}_poster.${extOf(posterFile.name)}`;
+    pendingUploads.push({path: videoPath, base64: await fileToBase64(videoFile), contentType: videoFile.type});
+    pendingUploads.push({path: posterPath, base64: await fileToBase64(posterFile), contentType: posterFile.type});
+    contentData.speedpaints.push({num:'', video: videoPath, poster: posterPath, title});
+    document.getElementById('newSpTitle').value = '';
+    document.getElementById('newSpVideo').value = '';
+    document.getElementById('newSpPoster').value = '';
+    renderSpeedpaints();
+  });
+
+  // ===== Proceso =====
+  function renderProceso(){
+    const wrap = document.getElementById('procesoRows');
+    wrap.innerHTML = '';
+    contentData.process.forEach((step, i) => {
+      const row = document.createElement('div');
+      row.className = 'field';
+      row.style.cssText = 'display:flex;gap:1rem;align-items:flex-start;border-bottom:1px solid var(--border);padding-bottom:1rem;margin-bottom:1rem;';
+      row.innerHTML = `
+        <img src="../${step.image}" style="width:80px;height:100px;object-fit:cover;border-radius:8px;flex:0 0 auto;" id="procImg${i}">
+        <div style="flex:1;">
+          <input type="text" value="${escapeHtml(step.title)}" data-proc-title="${i}" style="margin-bottom:.5rem;">
+          <textarea data-proc-desc="${i}" style="min-height:60px;">${escapeHtml(step.desc)}</textarea>
+          <input type="file" accept="image/*" data-proc-img="${i}" style="margin-top:.5rem;">
+        </div>
+      `;
+      wrap.appendChild(row);
+    });
+    wrap.querySelectorAll('[data-proc-title]').forEach(inp => {
+      inp.addEventListener('input', () => { contentData.process[parseInt(inp.dataset.procTitle)].title = inp.value; });
+    });
+    wrap.querySelectorAll('[data-proc-desc]').forEach(inp => {
+      inp.addEventListener('input', () => { contentData.process[parseInt(inp.dataset.procDesc)].desc = inp.value; });
+    });
+    wrap.querySelectorAll('[data-proc-img]').forEach(inp => {
+      inp.addEventListener('change', async () => {
+        const i = parseInt(inp.dataset.procImg);
+        const file = inp.files[0];
+        if(!file) return;
+        const base64 = await fileToBase64(file);
+        const path = `images/process_${Date.now()}.${extOf(file.name)}`;
+        pendingUploads.push({path, base64, contentType: file.type});
+        contentData.process[i].image = path;
+        document.getElementById('procImg' + i).src = URL.createObjectURL(file);
+      });
+    });
+  }
+
+  // ===== Guardar =====
+  document.getElementById('saveBtn').addEventListener('click', async () => {
+    collectPerfil();
+    const status = document.getElementById('saveStatus');
+    const btn = document.getElementById('saveBtn');
+    status.className = ''; status.textContent = '';
+    btn.disabled = true;
+
+    try{
+      // 1) subir archivos nuevos
+      for(let i = 0; i < pendingUploads.length; i++){
+        const f = pendingUploads[i];
+        status.textContent = `Subiendo archivo ${i+1} de ${pendingUploads.length}…`;
+        const res = await ghFetch(`/contents/${f.path}`, {
+          method:'PUT',
+          body: JSON.stringify({message:`Subir ${f.path}`, content: f.base64, branch: BRANCH})
+        });
+        if(!res.ok){ const e = await res.json().catch(()=>({})); throw new Error(`Error subiendo ${f.path}: ${e.message||res.status}`); }
+      }
+
+      // 2) borrar archivos e items marcados
+      const galleryToDelete = contentData.gallery.filter(g => g._delete);
+      const spToDelete = contentData.speedpaints.filter(s => s._delete);
+      const filesToDelete = [...galleryToDelete.map(g => g.file), ...spToDelete.flatMap(s => [s.video, s.poster])];
+      for(let i = 0; i < filesToDelete.length; i++){
+        status.textContent = `Borrando archivo ${i+1} de ${filesToDelete.length}…`;
+        const path = filesToDelete[i];
+        const info = await ghFetch(`/contents/${path}?ref=${BRANCH}`);
+        if(info.ok){
+          const infoData = await info.json();
+          await ghFetch(`/contents/${path}`, {
+            method:'DELETE',
+            body: JSON.stringify({message:`Borrar ${path}`, sha: infoData.sha, branch: BRANCH})
+          });
+        }
+      }
+      contentData.gallery = contentData.gallery.filter(g => !g._delete);
+      contentData.speedpaints = contentData.speedpaints.filter(s => !s._delete);
+
+      // 3) guardar content.json (con sha fresco para evitar conflictos)
+      status.textContent = 'Guardando cambios…';
+      const fresh = await ghFetch(`/contents/${CONTENT_PATH}?ref=${BRANCH}`);
+      const freshData = await fresh.json();
+      const jsonStr = JSON.stringify(contentData, null, 2);
+      const jsonB64 = btoa(unescape(encodeURIComponent(jsonStr)));
+      const put = await ghFetch(`/contents/${CONTENT_PATH}`, {
+        method:'PUT',
+        body: JSON.stringify({message:'Actualizar contenido del sitio desde el panel', content: jsonB64, sha: freshData.sha, branch: BRANCH})
+      });
+      if(!put.ok){ const e = await put.json().catch(()=>({})); throw new Error(`Error guardando content.json: ${e.message||put.status}`); }
+
+      status.className = 'ok';
+      status.textContent = '✓ Publicado. El sitio se actualiza en 1-2 minutos.';
+      pendingUploads = [];
+      await loadContent();
+    }catch(err){
+      status.className = 'err';
+      status.textContent = '✕ ' + err.message;
+    }
+    btn.disabled = false;
+  });
+
+  // ===== Auto-login si ya había token guardado =====
+  if(TOKEN){
+    tryConnect(TOKEN).catch(() => {
+      localStorage.removeItem('bluinenf_admin_token');
+      TOKEN = '';
+    });
+  }
+</script>
+</body>
+</html>

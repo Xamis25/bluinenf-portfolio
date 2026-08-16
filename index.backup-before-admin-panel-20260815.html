@@ -838,440 +838,366 @@
 </div>
 
 <script>
-  let CONTENT = null;
-
-  function escapeHtml(s){
-    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const TOTAL_IMAGES = 52; // art53 no se usa: es el mismo archivo que art45 (duplicado detectado)
+  const images = [];
+  for(let i=1;i<=TOTAL_IMAGES;i++){
+    const n = String(i).padStart(2,'0');
+    images.push(`images/art${n}.jpg`);
   }
 
-  // ===== Perfil: avatar, bio, stats, twitter (con fallback al contenido ya presente en el HTML) =====
-  function applyProfile(profile){
-    if(!profile) return;
+  // Categorías reales por ilustración (índice 0 = art01 ... índice 51 = art52)
+  const CATS = [
+    ['color','destacadas'],['color'],['color'],['color','destacadas'],['color'],
+    ['color'],['color'],['color'],['color','destacadas'],['boceto'],
+    ['color'],['color','personajes','destacadas'],['color'],['color'],['color'],
+    ['boceto'],['color','destacadas'],['color','personajes'],['color','personajes'],['boceto'],
+    ['boceto'],['boceto'],['color','personajes'],['color'],['color','personajes'],
+    ['boceto'],['boceto'],['color'],['color'],['color','personajes'],
+    ['color','personajes'],['color'],['color','personajes'],['color','personajes'],['boceto','personajes'],
+    ['color','personajes'],['color','personajes'],['color','personajes'],['color','personajes'],['color'],
+    ['color','personajes'],['boceto','personajes'],['color'],['color','destacadas'],['color'],
+    ['color','personajes'],['color','personajes'],['color'],['color','personajes'],['color','personajes'],
+    ['color','personajes'],['color','personajes']
+  ];
 
-    const eyebrowEl = document.querySelector('.eyebrow');
-    if(eyebrowEl && profile.tagline) eyebrowEl.textContent = profile.tagline;
+  // ===== Hero carousel (destacadas) =====
+  const destacadaIdx = CATS.reduce((acc,c,i) => { if(c.includes('destacadas')) acc.push(i); return acc; }, []);
 
-    const avatarImg = document.querySelector('.about-avatar-inner img');
-    if(avatarImg && profile.avatar) avatarImg.src = profile.avatar;
-
-    const heroDescEl = document.querySelector('.hero-text p');
-    if(heroDescEl && profile.heroDesc) heroDescEl.textContent = profile.heroDesc;
-
-    const aboutTextDiv = document.querySelector('.about-text');
-    if(aboutTextDiv && Array.isArray(profile.aboutParagraphs)){
-      aboutTextDiv.querySelectorAll('p').forEach(p => p.remove());
-      profile.aboutParagraphs.forEach(text => {
-        const p = document.createElement('p');
-        const safe = escapeHtml(text);
-        const name = profile.name ? escapeHtml(profile.name) : '';
-        p.innerHTML = name ? safe.split(name).join(`<strong>${name}</strong>`) : safe;
-        aboutTextDiv.appendChild(p);
+  // ===== Fondo del hero: rotación lenta entre 5 obras elegidas a mano por Ri =====
+  // No depende del tag "destacadas" del carrusel: es una selección aparte, específica para el hero.
+  const HERO_ROTATION_IDX = [19, 7, 11, 31, 44]; // art20, art08, art12, art32, art45
+  // Encuadre afinado a mano por obra (mismo criterio que se usó para art12 en el hero original).
+  const HERO_POSITIONS = {19:'75% 25%', 7:'55% 30%', 11:'78% 30%', 31:'75% 20%', 44:'50% 20%'};
+  const heroBgStack = document.getElementById('heroBgStack');
+  if(heroBgStack){
+    const heroImgs = HERO_ROTATION_IDX.map((idx, i) => {
+      const img = document.createElement('img');
+      img.src = images[idx];
+      img.alt = 'Ilustración destacada de BluinenF';
+      img.className = 'hero-bg-img' + (i === 0 ? ' active' : '');
+      img.style.objectPosition = HERO_POSITIONS[idx] || '50% 20%';
+      if(i > 0) img.loading = 'eager'; // son pocas y livianas; se ven pronto por el crossfade
+      heroBgStack.appendChild(img);
+      return img;
+    });
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if(heroImgs.length > 1 && !prefersReducedMotion){
+      let heroIdx = 0;
+      const HERO_ROTATE_MS = 6500;
+      let heroTimer = null;
+      function advanceHero(){
+        heroImgs[heroIdx].classList.remove('active');
+        heroIdx = (heroIdx + 1) % heroImgs.length;
+        heroImgs[heroIdx].classList.add('active');
+      }
+      function startHeroRotation(){
+        if(heroTimer) return;
+        heroTimer = setInterval(advanceHero, HERO_ROTATE_MS);
+      }
+      function stopHeroRotation(){
+        clearInterval(heroTimer);
+        heroTimer = null;
+      }
+      startHeroRotation();
+      document.addEventListener('visibilitychange', () => {
+        if(document.hidden) stopHeroRotation();
+        else startHeroRotation();
       });
-    }
-
-    const statsWrap = document.querySelector('.about-stats');
-    if(statsWrap && Array.isArray(profile.stats)){
-      statsWrap.innerHTML = '';
-      profile.stats.forEach(s => {
-        const pill = document.createElement('div');
-        pill.className = 'stat-pill';
-        pill.innerHTML = `<span class="stat-pill-icon">${escapeHtml(s.icon)}</span><div><b>${escapeHtml(s.value)}</b><span>${escapeHtml(s.label)}</span></div>`;
-        statsWrap.appendChild(pill);
-      });
-    }
-
-    if(profile.twitter){
-      document.querySelectorAll('a[href^="https://x.com/"]').forEach(a => {
-        a.href = `https://x.com/${profile.twitter}`;
-      });
-      const contactLink = document.querySelector('.social-row .btn-primary');
-      if(contactLink) contactLink.textContent = `🐦 Twitter / X — @${profile.twitter}`;
     }
   }
 
-  // ===== Del boceto al color: tarjetas de proceso =====
-  function applyProcess(process){
-    const track = document.querySelector('.process-track');
-    if(!track || !Array.isArray(process) || !process.length) return;
-    track.innerHTML = '';
-    process.forEach(step => {
-      const card = document.createElement('div');
-      card.className = 'process-card';
-      card.innerHTML = `
-        <span class="pc-num">${escapeHtml(step.num)}</span>
-        <img src="${step.image}" alt="Etapa de ${escapeHtml(step.title)}" loading="lazy">
-        <div class="pc-body">
-          <h3>${escapeHtml(step.title)}</h3>
-          <p>${escapeHtml(step.desc)}</p>
+  // ===== EXPERIMENTAL v4: Obras destacadas — 2 diseños nuevos con selector =====
+  if(destacadaIdx.length){
+    // --- Variante D: carrusel 3D tipo coverflow (mejorado) ---
+    const cfWrap = document.getElementById('cfWrap');
+    const cfDots = document.getElementById('cfDots');
+    const cfCounter = document.getElementById('cfCounter');
+    if(cfWrap){
+      const cfCount = destacadaIdx.length;
+      const cfReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      let cfActive = 0;
+
+      const cfCards = destacadaIdx.map((realIdx) => {
+        const card = document.createElement('div');
+        card.className = 'cf-card';
+        card.innerHTML = `
+          <div class="cf-face"><img src="${images[realIdx]}" alt="Obra destacada de BluinenF" loading="lazy"></div>
+          <div class="cf-reflect"><img src="${images[realIdx]}" alt="" aria-hidden="true" loading="lazy"></div>
+        `;
+        card.addEventListener('click', () => {
+          const pos = cfCards.indexOf(card);
+          if(pos === cfActive) openLightbox(realIdx);
+          else goToCf(pos);
+        });
+        cfWrap.appendChild(card);
+        return card;
+      });
+      destacadaIdx.forEach((_, i) => {
+        const dot = document.createElement('button');
+        dot.className = 'cf-dot' + (i === 0 ? ' active' : '');
+        dot.setAttribute('aria-label', `Ir a la obra ${i+1}`);
+        dot.addEventListener('click', () => goToCf(i));
+        cfDots.appendChild(dot);
+      });
+      const cfDotEls = cfDots.querySelectorAll('.cf-dot');
+
+      // distancia circular: siempre toma el camino más corto, así el abanico
+      // queda parejo a ambos lados sin importar qué carta esté activa
+      function circularOffset(i){
+        let offset = i - cfActive;
+        if(offset > cfCount / 2) offset -= cfCount;
+        if(offset < -cfCount / 2) offset += cfCount;
+        return offset;
+      }
+
+      function renderCf(){
+        cfCards.forEach((card, i) => {
+          const offset = circularOffset(i);
+          const absOff = Math.abs(offset);
+          const isActive = offset === 0;
+          card.classList.toggle('is-active', isActive);
+          card.style.transform = `translateX(${offset * 165}px) rotateY(${offset * -30}deg) scale(${1 - absOff * 0.13})`;
+          card.style.zIndex = 100 - absOff;
+          card.style.opacity = absOff > 3 ? '0' : String(1 - absOff * 0.16);
+          card.style.pointerEvents = absOff > 3 ? 'none' : 'auto';
+          card.style.filter = cfReducedMotion || isActive ? 'none' : `brightness(${1 - absOff * 0.14}) blur(${Math.min(absOff, 2) * 0.5}px)`;
+        });
+        cfDotEls.forEach((d,i) => d.classList.toggle('active', i === cfActive));
+        cfCounter.textContent = `${String(cfActive+1).padStart(2,'0')} / ${String(cfCount).padStart(2,'0')}`;
+      }
+      function goToCf(i){
+        cfActive = ((i % cfCount) + cfCount) % cfCount;
+        renderCf();
+      }
+      renderCf();
+
+      document.getElementById('cfPrev').addEventListener('click', () => goToCf(cfActive - 1));
+      document.getElementById('cfNext').addEventListener('click', () => goToCf(cfActive + 1));
+      cfWrap.addEventListener('keydown', e => {
+        if(e.key === 'ArrowLeft'){ e.preventDefault(); goToCf(cfActive - 1); }
+        if(e.key === 'ArrowRight'){ e.preventDefault(); goToCf(cfActive + 1); }
+      });
+
+      // swipe táctil
+      let cfTouchStartX = 0;
+      cfWrap.addEventListener('touchstart', e => { cfTouchStartX = e.changedTouches[0].screenX; }, {passive:true});
+      cfWrap.addEventListener('touchend', e => {
+        const dx = e.changedTouches[0].screenX - cfTouchStartX;
+        if(Math.abs(dx) > 50) goToCf(cfActive + (dx > 0 ? -1 : 1));
+      }, {passive:true});
+
+      // arrastre con mouse (equivalente de escritorio al swipe)
+      let cfMouseDown = false, cfMouseStartX = 0, cfDragged = false;
+      cfWrap.addEventListener('mousedown', e => {
+        cfMouseDown = true; cfDragged = false; cfMouseStartX = e.clientX;
+        cfWrap.classList.add('dragging');
+      });
+      window.addEventListener('mousemove', e => {
+        if(!cfMouseDown) return;
+        if(Math.abs(e.clientX - cfMouseStartX) > 8) cfDragged = true;
+      });
+      window.addEventListener('mouseup', e => {
+        if(!cfMouseDown) return;
+        cfMouseDown = false;
+        cfWrap.classList.remove('dragging');
+        if(cfDragged){
+          const dx = e.clientX - cfMouseStartX;
+          if(Math.abs(dx) > 60) goToCf(cfActive + (dx > 0 ? -1 : 1));
+        }
+      });
+      // evita que el click del arrastre se cuele como "abrir lightbox"
+      cfWrap.addEventListener('click', e => { if(cfDragged) e.stopPropagation(); }, true);
+    }
+  }
+
+  // ===== EXPERIMENTAL v2: sección de videos tipo "watch" con playlist lateral =====
+  // sp05 primero (coincide con la demo "Del boceto al color"), luego el resto
+  const VIDEO_ORDER = [5,1,2,3,4,6,7,8,9,10];
+  const watchList = document.getElementById('watchList');
+  const cinemaVideo = document.getElementById('cinemaVideo');
+  const cinemaPlayBtn = document.getElementById('cinemaPlayBtn');
+  const cinemaLabel = document.getElementById('cinemaLabel');
+  const cinemaTag = document.getElementById('cinemaTag');
+
+  if(watchList && cinemaVideo){
+    VIDEO_ORDER.forEach((num, i) => {
+      const n = String(num).padStart(2,'0');
+      const item = document.createElement('div');
+      item.className = 'watch-item' + (i === 0 ? ' active' : '');
+      item.dataset.num = n;
+      item.dataset.first = i === 0 ? '1' : '0';
+      item.innerHTML = `
+        <div class="watch-thumb"><img src="videos/sp${n}_poster.jpg" alt="Miniatura speedpaint ${n}" loading="lazy"></div>
+        <div class="watch-meta">
+          <span class="wm-title">Speedpaint ${n}</span>
+          <span class="wm-sub" data-role="sub">1:00</span>
         </div>
       `;
-      track.appendChild(card);
-    });
-  }
-
-  async function loadContent(){
-    try{
-      const res = await fetch('data/content.json', {cache:'no-store'});
-      if(res.ok) CONTENT = await res.json();
-    }catch(e){
-      console.warn('No se pudo cargar data/content.json, se usa el contenido estático de respaldo.', e);
-    }
-    init(CONTENT || {});
-  }
-
-  function init(data){
-    applyProfile(data.profile);
-    applyProcess(data.process);
-
-    const images = (data.gallery || []).map(g => g.file);
-    const CATS = (data.gallery || []).map(g => g.categories || []);
-
-    // ===== Hero carousel (destacadas) =====
-    const destacadaIdx = CATS.reduce((acc,c,i) => { if(c.includes('destacadas')) acc.push(i); return acc; }, []);
-
-    // ===== Fondo del hero: rotación lenta entre las obras elegidas en el panel de admin =====
-    const heroBgStack = document.getElementById('heroBgStack');
-    if(heroBgStack && Array.isArray(data.heroRotation) && data.heroRotation.length){
-      const heroImgs = data.heroRotation.map((h, i) => {
-        const img = document.createElement('img');
-        img.src = h.file;
-        img.alt = 'Ilustración destacada de BluinenF';
-        img.className = 'hero-bg-img' + (i === 0 ? ' active' : '');
-        img.style.objectPosition = h.position || '50% 20%';
-        if(i > 0) img.loading = 'eager'; // son pocas y livianas; se ven pronto por el crossfade
-        heroBgStack.appendChild(img);
-        return img;
-      });
-      const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-      if(heroImgs.length > 1 && !prefersReducedMotion){
-        let heroIdx = 0;
-        const HERO_ROTATE_MS = 6500;
-        let heroTimer = null;
-        function advanceHero(){
-          heroImgs[heroIdx].classList.remove('active');
-          heroIdx = (heroIdx + 1) % heroImgs.length;
-          heroImgs[heroIdx].classList.add('active');
-        }
-        function startHeroRotation(){
-          if(heroTimer) return;
-          heroTimer = setInterval(advanceHero, HERO_ROTATE_MS);
-        }
-        function stopHeroRotation(){
-          clearInterval(heroTimer);
-          heroTimer = null;
-        }
-        startHeroRotation();
-        document.addEventListener('visibilitychange', () => {
-          if(document.hidden) stopHeroRotation();
-          else startHeroRotation();
-        });
-      }
-    }
-
-    // ===== Obras destacadas: carrusel 3D tipo coverflow =====
-    if(destacadaIdx.length){
-      const cfWrap = document.getElementById('cfWrap');
-      const cfDots = document.getElementById('cfDots');
-      const cfCounter = document.getElementById('cfCounter');
-      if(cfWrap){
-        const cfCount = destacadaIdx.length;
-        const cfReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-        let cfActive = 0;
-
-        const cfCards = destacadaIdx.map((realIdx) => {
-          const card = document.createElement('div');
-          card.className = 'cf-card';
-          card.innerHTML = `
-            <div class="cf-face"><img src="${images[realIdx]}" alt="Obra destacada de BluinenF" loading="lazy"></div>
-            <div class="cf-reflect"><img src="${images[realIdx]}" alt="" aria-hidden="true" loading="lazy"></div>
-          `;
-          card.addEventListener('click', () => {
-            const pos = cfCards.indexOf(card);
-            if(pos === cfActive) openLightbox(realIdx);
-            else goToCf(pos);
-          });
-          cfWrap.appendChild(card);
-          return card;
-        });
-        destacadaIdx.forEach((_, i) => {
-          const dot = document.createElement('button');
-          dot.className = 'cf-dot' + (i === 0 ? ' active' : '');
-          dot.setAttribute('aria-label', `Ir a la obra ${i+1}`);
-          dot.addEventListener('click', () => goToCf(i));
-          cfDots.appendChild(dot);
-        });
-        const cfDotEls = cfDots.querySelectorAll('.cf-dot');
-
-        // distancia circular: siempre toma el camino más corto, así el abanico
-        // queda parejo a ambos lados sin importar qué carta esté activa
-        function circularOffset(i){
-          let offset = i - cfActive;
-          if(offset > cfCount / 2) offset -= cfCount;
-          if(offset < -cfCount / 2) offset += cfCount;
-          return offset;
-        }
-
-        function renderCf(){
-          cfCards.forEach((card, i) => {
-            const offset = circularOffset(i);
-            const absOff = Math.abs(offset);
-            const isActive = offset === 0;
-            card.classList.toggle('is-active', isActive);
-            card.style.transform = `translateX(${offset * 165}px) rotateY(${offset * -30}deg) scale(${1 - absOff * 0.13})`;
-            card.style.zIndex = 100 - absOff;
-            card.style.opacity = absOff > 3 ? '0' : String(1 - absOff * 0.16);
-            card.style.pointerEvents = absOff > 3 ? 'none' : 'auto';
-            card.style.filter = cfReducedMotion || isActive ? 'none' : `brightness(${1 - absOff * 0.14}) blur(${Math.min(absOff, 2) * 0.5}px)`;
-          });
-          cfDotEls.forEach((d,i) => d.classList.toggle('active', i === cfActive));
-          cfCounter.textContent = `${String(cfActive+1).padStart(2,'0')} / ${String(cfCount).padStart(2,'0')}`;
-        }
-        function goToCf(i){
-          cfActive = ((i % cfCount) + cfCount) % cfCount;
-          renderCf();
-        }
-        renderCf();
-
-        document.getElementById('cfPrev').addEventListener('click', () => goToCf(cfActive - 1));
-        document.getElementById('cfNext').addEventListener('click', () => goToCf(cfActive + 1));
-        cfWrap.addEventListener('keydown', e => {
-          if(e.key === 'ArrowLeft'){ e.preventDefault(); goToCf(cfActive - 1); }
-          if(e.key === 'ArrowRight'){ e.preventDefault(); goToCf(cfActive + 1); }
-        });
-
-        // swipe táctil
-        let cfTouchStartX = 0;
-        cfWrap.addEventListener('touchstart', e => { cfTouchStartX = e.changedTouches[0].screenX; }, {passive:true});
-        cfWrap.addEventListener('touchend', e => {
-          const dx = e.changedTouches[0].screenX - cfTouchStartX;
-          if(Math.abs(dx) > 50) goToCf(cfActive + (dx > 0 ? -1 : 1));
-        }, {passive:true});
-
-        // arrastre con mouse (equivalente de escritorio al swipe)
-        let cfMouseDown = false, cfMouseStartX = 0, cfDragged = false;
-        cfWrap.addEventListener('mousedown', e => {
-          cfMouseDown = true; cfDragged = false; cfMouseStartX = e.clientX;
-          cfWrap.classList.add('dragging');
-        });
-        window.addEventListener('mousemove', e => {
-          if(!cfMouseDown) return;
-          if(Math.abs(e.clientX - cfMouseStartX) > 8) cfDragged = true;
-        });
-        window.addEventListener('mouseup', e => {
-          if(!cfMouseDown) return;
-          cfMouseDown = false;
-          cfWrap.classList.remove('dragging');
-          if(cfDragged){
-            const dx = e.clientX - cfMouseStartX;
-            if(Math.abs(dx) > 60) goToCf(cfActive + (dx > 0 ? -1 : 1));
-          }
-        });
-        // evita que el click del arrastre se cuele como "abrir lightbox"
-        cfWrap.addEventListener('click', e => { if(cfDragged) e.stopPropagation(); }, true);
-      }
-    }
-
-    // ===== Speedpaints: sección de videos tipo "watch" con playlist lateral =====
-    const speedpaints = data.speedpaints || [];
-    const watchList = document.getElementById('watchList');
-    const cinemaVideo = document.getElementById('cinemaVideo');
-    const cinemaPlayBtn = document.getElementById('cinemaPlayBtn');
-    const cinemaLabel = document.getElementById('cinemaLabel');
-    const cinemaTag = document.getElementById('cinemaTag');
-
-    if(watchList && cinemaVideo && speedpaints.length){
-      speedpaints.forEach((sp, i) => {
-        const item = document.createElement('div');
-        item.className = 'watch-item' + (i === 0 ? ' active' : '');
-        item.dataset.idx = i;
-        item.innerHTML = `
-          <div class="watch-thumb"><img src="${sp.poster}" alt="Miniatura ${escapeHtml(sp.title)}" loading="lazy"></div>
-          <div class="watch-meta">
-            <span class="wm-title">${escapeHtml(sp.title)}</span>
-            <span class="wm-sub" data-role="sub">1:00</span>
-          </div>
-        `;
-        watchList.appendChild(item);
-      });
-
-      // Solo existe un <video> real en toda la sección: nunca puede haber dos reproduciendo a la vez.
-      function setEqualizer(item, playing){
-        const sub = item.querySelector('[data-role="sub"]');
-        if(playing){
-          sub.innerHTML = '<span class="watch-eq"><span></span><span></span><span></span></span> Reproduciendo';
-        } else {
-          sub.textContent = '1:00';
-        }
-      }
-      function loadWatch(idx){
-        const sp = speedpaints[idx];
-        cinemaVideo.pause();
-        cinemaVideo.controls = false;
-        cinemaVideo.removeAttribute('src');
-        Array.from(cinemaVideo.querySelectorAll('source')).forEach(s => s.remove());
-        const source = document.createElement('source');
-        source.src = sp.video;
-        source.type = 'video/mp4';
-        cinemaVideo.appendChild(source);
-        cinemaVideo.poster = sp.poster;
-        cinemaVideo.load();
-        cinemaPlayBtn.classList.remove('hidden');
-        cinemaLabel.textContent = sp.title;
-        cinemaTag.style.display = idx === 0 ? '' : 'none';
-        Array.from(watchList.children).forEach((el, i) => {
-          const isActive = i === idx;
-          el.classList.toggle('active', isActive);
-          setEqualizer(el, false);
-        });
-      }
-
-      loadWatch(0);
-
-      cinemaPlayBtn.addEventListener('click', () => {
-        cinemaPlayBtn.classList.add('hidden');
-        cinemaVideo.controls = true;
-        cinemaVideo.play().catch(() => { cinemaPlayBtn.classList.remove('hidden'); });
-      });
-      cinemaVideo.addEventListener('play', () => {
-        const active = watchList.querySelector('.watch-item.active');
-        if(active) setEqualizer(active, true);
-      });
-      cinemaVideo.addEventListener('pause', () => {
-        const active = watchList.querySelector('.watch-item.active');
-        if(active) setEqualizer(active, false);
-      });
-      cinemaVideo.addEventListener('ended', () => {
-        cinemaVideo.controls = false;
-        cinemaPlayBtn.classList.remove('hidden');
-      });
-      watchList.addEventListener('click', e => {
-        const item = e.target.closest('.watch-item');
-        if(item) loadWatch(parseInt(item.dataset.idx));
-      });
-    }
-
-    // ===== Gallery: todas las ilustraciones juntas =====
-    const gallery = document.getElementById('gallery');
-    const INITIAL_VISIBLE = 24;
-    let expanded = false;
-
-    const CAT_DOT_COLOR = {personajes:'var(--accent-2)', boceto:'#d8d4e6', color:'var(--accent)'};
-    images.forEach((src, idx) => {
-      const fig = document.createElement('figure');
-      fig.dataset.index = idx;
-      fig.dataset.cats = CATS[idx].join(' ');
-      const primaryCat = CATS[idx].find(c => c !== 'destacadas') || 'color';
-      fig.innerHTML = `
-        <img src="${src}" alt="Ilustración ${idx+1} de BluinenF" loading="lazy">
-        <span class="g-dot" style="background:${CAT_DOT_COLOR[primaryCat] || 'var(--accent)'}"></span>
-      `;
-      gallery.appendChild(fig);
+      watchList.appendChild(item);
     });
 
-    const galleryToggle = document.getElementById('galleryToggle');
-    const galleryHint = document.getElementById('galleryHint');
-    const galleryEmpty = document.getElementById('galleryEmpty');
-    const allFigures = Array.from(gallery.querySelectorAll('figure'));
-
-    function renderGallery(){
-      const visibleCount = expanded ? allFigures.length : Math.min(INITIAL_VISIBLE, allFigures.length);
-
-      allFigures.forEach(f => f.classList.remove('gvisible'));
-      allFigures.slice(0, visibleCount).forEach(f => {
-        f.classList.add('gvisible');
-        requestAnimationFrame(() => f.classList.add('in-view'));
-      });
-
-      galleryEmpty.classList.toggle('show', allFigures.length === 0);
-
-      if(allFigures.length > INITIAL_VISIBLE){
-        galleryToggle.style.display = 'inline-flex';
-        galleryToggle.textContent = expanded ? '— Mostrar menos' : `✨ Ver todas (+${allFigures.length - INITIAL_VISIBLE})`;
-        galleryHint.textContent = `Mostrando ${visibleCount} de ${allFigures.length}`;
+    // Solo existe un <video> real en toda la sección: nunca puede haber dos reproduciendo a la vez.
+    function setEqualizer(item, playing){
+      const sub = item.querySelector('[data-role="sub"]');
+      if(playing){
+        sub.innerHTML = '<span class="watch-eq"><span></span><span></span><span></span></span> Reproduciendo';
       } else {
-        galleryToggle.style.display = 'none';
-        galleryHint.textContent = allFigures.length ? `Mostrando ${allFigures.length} de ${allFigures.length}` : '';
+        sub.textContent = '1:00';
       }
     }
+    function loadWatch(n, isFirst){
+      cinemaVideo.pause();
+      cinemaVideo.controls = false;
+      cinemaVideo.removeAttribute('src');
+      Array.from(cinemaVideo.querySelectorAll('source')).forEach(s => s.remove());
+      const source = document.createElement('source');
+      source.src = `videos/sp${n}.mp4`;
+      source.type = 'video/mp4';
+      cinemaVideo.appendChild(source);
+      cinemaVideo.poster = `videos/sp${n}_poster.jpg`;
+      cinemaVideo.load();
+      cinemaPlayBtn.classList.remove('hidden');
+      cinemaLabel.textContent = `Speedpaint ${n}`;
+      cinemaTag.style.display = isFirst ? '' : 'none';
+      Array.from(watchList.children).forEach(el => {
+        const isActive = el.dataset.num === n;
+        el.classList.toggle('active', isActive);
+        setEqualizer(el, false);
+      });
+    }
 
-    galleryToggle.addEventListener('click', () => {
-      expanded = !expanded;
-      renderGallery();
-      if(!expanded){
-        document.getElementById('galeria').scrollIntoView({behavior:'smooth', block:'start'});
-      }
+    loadWatch(String(VIDEO_ORDER[0]).padStart(2,'0'), true);
+
+    cinemaPlayBtn.addEventListener('click', () => {
+      cinemaPlayBtn.classList.add('hidden');
+      cinemaVideo.controls = true;
+      cinemaVideo.play().catch(() => { cinemaPlayBtn.classList.remove('hidden'); });
+    });
+    cinemaVideo.addEventListener('play', () => {
+      const active = watchList.querySelector('.watch-item.active');
+      if(active) setEqualizer(active, true);
+    });
+    cinemaVideo.addEventListener('pause', () => {
+      const active = watchList.querySelector('.watch-item.active');
+      if(active) setEqualizer(active, false);
+    });
+    cinemaVideo.addEventListener('ended', () => {
+      cinemaVideo.controls = false;
+      cinemaPlayBtn.classList.remove('hidden');
+    });
+    watchList.addEventListener('click', e => {
+      const item = e.target.closest('.watch-item');
+      if(item) loadWatch(item.dataset.num, item.dataset.first === '1');
+    });
+  }
+
+  // ===== Gallery: todas las ilustraciones juntas =====
+  const gallery = document.getElementById('gallery');
+  const INITIAL_VISIBLE = 24;
+  let expanded = false;
+
+  const CAT_DOT_COLOR = {personajes:'var(--accent-2)', boceto:'#d8d4e6', color:'var(--accent)'};
+  images.forEach((src, idx) => {
+    const fig = document.createElement('figure');
+    fig.dataset.index = idx;
+    fig.dataset.cats = CATS[idx].join(' ');
+    const primaryCat = CATS[idx].find(c => c !== 'destacadas') || 'color';
+    fig.innerHTML = `
+      <img src="${src}" alt="Ilustración ${idx+1} de BluinenF" loading="lazy">
+      <span class="g-dot" style="background:${CAT_DOT_COLOR[primaryCat] || 'var(--accent)'}"></span>
+    `;
+    gallery.appendChild(fig);
+  });
+
+  const galleryToggle = document.getElementById('galleryToggle');
+  const galleryHint = document.getElementById('galleryHint');
+  const galleryEmpty = document.getElementById('galleryEmpty');
+  const allFigures = Array.from(gallery.querySelectorAll('figure'));
+
+  function renderGallery(){
+    const visibleCount = expanded ? allFigures.length : Math.min(INITIAL_VISIBLE, allFigures.length);
+
+    allFigures.forEach(f => f.classList.remove('gvisible'));
+    allFigures.slice(0, visibleCount).forEach(f => {
+      f.classList.add('gvisible');
+      requestAnimationFrame(() => f.classList.add('in-view'));
     });
 
-    renderGallery();
+    galleryEmpty.classList.toggle('show', allFigures.length === 0);
 
-    // ===== Lightbox =====
-    const lb = document.getElementById('lightbox');
-    const lbImg = document.getElementById('lbImg');
-    const lbCounter = document.getElementById('lbCounter');
-    let current = 0;
-
-    function setLbImage(){
-      lbImg.classList.remove('show');
-      setTimeout(() => {
-        lbImg.src = images[current];
-        lbCounter.textContent = `${current+1} / ${images.length}`;
-      }, 120);
+    if(allFigures.length > INITIAL_VISIBLE){
+      galleryToggle.style.display = 'inline-flex';
+      galleryToggle.textContent = expanded ? '— Mostrar menos' : `✨ Ver todas (+${allFigures.length - INITIAL_VISIBLE})`;
+      galleryHint.textContent = `Mostrando ${visibleCount} de ${allFigures.length}`;
+    } else {
+      galleryToggle.style.display = 'none';
+      galleryHint.textContent = allFigures.length ? `Mostrando ${allFigures.length} de ${allFigures.length}` : '';
     }
-    lbImg.addEventListener('load', () => requestAnimationFrame(() => lbImg.classList.add('show')));
+  }
 
-    function openLightbox(i){
-      current = i;
-      lb.classList.add('active');
-      document.body.style.overflow = 'hidden';
-      lbImg.classList.remove('show');
+  galleryToggle.addEventListener('click', () => {
+    expanded = !expanded;
+    renderGallery();
+    if(!expanded){
+      document.getElementById('galeria').scrollIntoView({behavior:'smooth', block:'start'});
+    }
+  });
+
+  renderGallery();
+
+  // ===== Lightbox =====
+  const lb = document.getElementById('lightbox');
+  const lbImg = document.getElementById('lbImg');
+  const lbCounter = document.getElementById('lbCounter');
+  let current = 0;
+
+  function setLbImage(){
+    lbImg.classList.remove('show');
+    setTimeout(() => {
       lbImg.src = images[current];
       lbCounter.textContent = `${current+1} / ${images.length}`;
-    }
-    function closeLightbox(){
-      lb.classList.remove('active');
-      document.body.style.overflow = '';
-    }
-    function navLb(delta){
-      current = (current + delta + images.length) % images.length;
-      setLbImage();
-    }
+    }, 120);
+  }
+  lbImg.addEventListener('load', () => requestAnimationFrame(() => lbImg.classList.add('show')));
 
-    gallery.addEventListener('click', e => {
-      const fig = e.target.closest('figure');
-      if(fig) openLightbox(parseInt(fig.dataset.index));
-    });
-    document.getElementById('lbClose').addEventListener('click', closeLightbox);
-    document.getElementById('lbPrev').addEventListener('click', () => navLb(-1));
-    document.getElementById('lbNext').addEventListener('click', () => navLb(1));
-    lb.addEventListener('click', e => { if(e.target === lb) closeLightbox(); });
-    document.addEventListener('keydown', e => {
-      if(!lb.classList.contains('active')) return;
-      if(e.key === 'Escape') closeLightbox();
-      if(e.key === 'ArrowLeft') navLb(-1);
-      if(e.key === 'ArrowRight') navLb(1);
-    });
-
-    let touchStartX = 0;
-    lb.addEventListener('touchstart', e => { touchStartX = e.changedTouches[0].screenX; }, {passive:true});
-    lb.addEventListener('touchend', e => {
-      const dx = e.changedTouches[0].screenX - touchStartX;
-      if(Math.abs(dx) > 50) navLb(dx > 0 ? -1 : 1);
-    }, {passive:true});
-
-    // ===== Reveal on scroll (incluye secciones reconstruidas dinámicamente) =====
-    const revealTargets = document.querySelectorAll('.reveal');
-    const revealObserver = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
-        if(entry.isIntersecting){
-          entry.target.classList.add('in-view');
-          revealObserver.unobserve(entry.target);
-        }
-      });
-    }, {threshold:.1});
-    revealTargets.forEach(t => revealObserver.observe(t));
+  function openLightbox(i){
+    current = i;
+    lb.classList.add('active');
+    document.body.style.overflow = 'hidden';
+    lbImg.classList.remove('show');
+    lbImg.src = images[current];
+    lbCounter.textContent = `${current+1} / ${images.length}`;
+  }
+  function closeLightbox(){
+    lb.classList.remove('active');
+    document.body.style.overflow = '';
+  }
+  function navLb(delta){
+    current = (current + delta + images.length) % images.length;
+    setLbImage();
   }
 
-  loadContent();
+  gallery.addEventListener('click', e => {
+    const fig = e.target.closest('figure');
+    if(fig) openLightbox(parseInt(fig.dataset.index));
+  });
+  document.getElementById('lbClose').addEventListener('click', closeLightbox);
+  document.getElementById('lbPrev').addEventListener('click', () => navLb(-1));
+  document.getElementById('lbNext').addEventListener('click', () => navLb(1));
+  lb.addEventListener('click', e => { if(e.target === lb) closeLightbox(); });
+  document.addEventListener('keydown', e => {
+    if(!lb.classList.contains('active')) return;
+    if(e.key === 'Escape') closeLightbox();
+    if(e.key === 'ArrowLeft') navLb(-1);
+    if(e.key === 'ArrowRight') navLb(1);
+  });
+
+  let touchStartX = 0;
+  lb.addEventListener('touchstart', e => { touchStartX = e.changedTouches[0].screenX; }, {passive:true});
+  lb.addEventListener('touchend', e => {
+    const dx = e.changedTouches[0].screenX - touchStartX;
+    if(Math.abs(dx) > 50) navLb(dx > 0 ? -1 : 1);
+  }, {passive:true});
 
   // ===== Mobile menu =====
   const menuToggle = document.getElementById('menuToggle');
@@ -1344,6 +1270,18 @@
       if(eggModal.classList.contains('active') && e.key === 'Escape') closeEgg();
     });
   }
+
+  // ===== Reveal on scroll =====
+  const revealTargets = document.querySelectorAll('.reveal');
+  const revealObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if(entry.isIntersecting){
+        entry.target.classList.add('in-view');
+        revealObserver.unobserve(entry.target);
+      }
+    });
+  }, {threshold:.1});
+  revealTargets.forEach(t => revealObserver.observe(t));
 </script>
 
 </body>

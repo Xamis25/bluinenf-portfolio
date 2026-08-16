@@ -3,3 +3,6 @@ videos_original/
 
 # Artifacts de deploy manual (Netlify)
 *.zip
+
+# Guía personal para el amigo, no es contenido del sitio
+GUIA-PARA-EL-AMIGO.md
