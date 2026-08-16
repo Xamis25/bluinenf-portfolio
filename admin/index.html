@@ -36,7 +36,7 @@
   .hidden{display:none !important;}
 
   /* LOGIN */
-  #loginScreen{
+  #gateScreen, #loginScreen{
     min-height:100vh;display:flex;align-items:center;justify-content:center;padding:2rem;
   }
   .login-card{
@@ -102,7 +102,18 @@
 </head>
 <body>
 
-<div id="loginScreen">
+<div id="gateScreen">
+  <div class="login-card">
+    <h1>Panel de BluinenF</h1>
+    <p>Esta sección es privada. Ingresá la contraseña para continuar.</p>
+    <label for="gateInput">Contraseña</label>
+    <input type="password" id="gateInput" autocomplete="off">
+    <button class="primary" id="gateBtn" style="width:100%;margin-top:.4rem;">Entrar</button>
+    <p id="gateError" style="color:var(--danger);font-size:.85rem;margin-top:.8rem;display:none;">Contraseña incorrecta.</p>
+  </div>
+</div>
+
+<div id="loginScreen" class="hidden">
   <div class="login-card">
     <h1>Panel de BluinenF</h1>
     <p>Pegá tu token de GitHub para poder editar el sitio (perfil, galería, speedpaints). El token se guarda solo en este navegador, nunca se envía a otro lado más que a GitHub.</p>
@@ -212,6 +223,31 @@
 </div>
 
 <script>
+  // ===== Cortina de privacidad (no es seguridad real: la seguridad de verdad
+  // es el token de GitHub, que solo pueden generar los colaboradores del repo).
+  // Esto solo evita que un visitante casual se tope con el panel.
+  const GATE_PASSWORD = 'bluinenf2026';
+  const gateScreen = document.getElementById('gateScreen');
+  const loginScreenEl = document.getElementById('loginScreen');
+  function passGate(){
+    gateScreen.classList.add('hidden');
+    loginScreenEl.classList.remove('hidden');
+  }
+  if(localStorage.getItem('bluinenf_gate_ok') === '1') passGate();
+  document.getElementById('gateBtn').addEventListener('click', () => {
+    const val = document.getElementById('gateInput').value;
+    if(val === GATE_PASSWORD){
+      localStorage.setItem('bluinenf_gate_ok', '1');
+      document.getElementById('gateError').style.display = 'none';
+      passGate();
+    } else {
+      document.getElementById('gateError').style.display = 'block';
+    }
+  });
+  document.getElementById('gateInput').addEventListener('keydown', e => {
+    if(e.key === 'Enter') document.getElementById('gateBtn').click();
+  });
+
   const OWNER = 'Xamis25';
   const REPO = 'bluinenf-portfolio';
   const BRANCH = 'main';
