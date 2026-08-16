@@ -571,7 +571,17 @@
     });
   }
 
-  // ===== Guardar =====
+  // ===== Guardar (Git Data API: blobs + tree + commit, soporta archivos grandes) =====
+  async function createBlob(base64Content){
+    const res = await ghFetch('/git/blobs', {
+      method:'POST',
+      body: JSON.stringify({content: base64Content, encoding:'base64'})
+    });
+    if(!res.ok){ const e = await res.json().catch(()=>({})); throw new Error(e.message || `Error creando blob (${res.status})`); }
+    const data = await res.json();
+    return data.sha;
+  }
+
   document.getElementById('saveBtn').addEventListener('click', async () => {
     collectPerfil();
     const status = document.getElementById('saveStatus');
@@ -580,47 +590,61 @@
     btn.disabled = true;
 
     try{
-      // 1) subir archivos nuevos
+      // 1) commit base actual de la rama
+      status.textContent = 'Leyendo el estado actual del repositorio…';
+      const refRes = await ghFetch(`/git/ref/heads/${BRANCH}`);
+      if(!refRes.ok) throw new Error('No se pudo leer la rama del repositorio.');
+      const refData = await refRes.json();
+      const baseCommitSha = refData.object.sha;
+      const commitRes = await ghFetch(`/git/commits/${baseCommitSha}`);
+      const commitData = await commitRes.json();
+      const baseTreeSha = commitData.tree.sha;
+
+      // 2) crear un blob por cada archivo nuevo (soporta hasta 100MB c/u, sin el límite de 1MB del endpoint de contenidos)
+      const treeEntries = [];
       for(let i = 0; i < pendingUploads.length; i++){
         const f = pendingUploads[i];
         status.textContent = `Subiendo archivo ${i+1} de ${pendingUploads.length}…`;
-        const res = await ghFetch(`/contents/${f.path}`, {
-          method:'PUT',
-          body: JSON.stringify({message:`Subir ${f.path}`, content: f.base64, branch: BRANCH})
-        });
-        if(!res.ok){ const e = await res.json().catch(()=>({})); throw new Error(`Error subiendo ${f.path}: ${e.message||res.status}`); }
+        const blobSha = await createBlob(f.base64);
+        treeEntries.push({path: f.path, mode:'100644', type:'blob', sha: blobSha});
       }
 
-      // 2) borrar archivos e items marcados
+      // 3) archivos e items marcados para borrar (sha:null en el tree = borrar el archivo)
       const galleryToDelete = contentData.gallery.filter(g => g._delete);
       const spToDelete = contentData.speedpaints.filter(s => s._delete);
       const filesToDelete = [...galleryToDelete.map(g => g.file), ...spToDelete.flatMap(s => [s.video, s.poster])];
-      for(let i = 0; i < filesToDelete.length; i++){
-        status.textContent = `Borrando archivo ${i+1} de ${filesToDelete.length}…`;
-        const path = filesToDelete[i];
-        const info = await ghFetch(`/contents/${path}?ref=${BRANCH}`);
-        if(info.ok){
-          const infoData = await info.json();
-          await ghFetch(`/contents/${path}`, {
-            method:'DELETE',
-            body: JSON.stringify({message:`Borrar ${path}`, sha: infoData.sha, branch: BRANCH})
-          });
-        }
-      }
+      filesToDelete.forEach(path => treeEntries.push({path, mode:'100644', type:'blob', sha:null}));
       contentData.gallery = contentData.gallery.filter(g => !g._delete);
       contentData.speedpaints = contentData.speedpaints.filter(s => !s._delete);
 
-      // 3) guardar content.json (con sha fresco para evitar conflictos)
-      status.textContent = 'Guardando cambios…';
-      const fresh = await ghFetch(`/contents/${CONTENT_PATH}?ref=${BRANCH}`);
-      const freshData = await fresh.json();
+      // 4) content.json actualizado, como blob también
+      status.textContent = 'Preparando content.json…';
       const jsonStr = JSON.stringify(contentData, null, 2);
       const jsonB64 = btoa(unescape(encodeURIComponent(jsonStr)));
-      const put = await ghFetch(`/contents/${CONTENT_PATH}`, {
-        method:'PUT',
-        body: JSON.stringify({message:'Actualizar contenido del sitio desde el panel', content: jsonB64, sha: freshData.sha, branch: BRANCH})
+      const contentBlobSha = await createBlob(jsonB64);
+      treeEntries.push({path: CONTENT_PATH, mode:'100644', type:'blob', sha: contentBlobSha});
+
+      // 5) un solo tree + commit + mover la rama, todo junto
+      status.textContent = 'Publicando cambios…';
+      const treeRes = await ghFetch('/git/trees', {
+        method:'POST',
+        body: JSON.stringify({base_tree: baseTreeSha, tree: treeEntries})
       });
-      if(!put.ok){ const e = await put.json().catch(()=>({})); throw new Error(`Error guardando content.json: ${e.message||put.status}`); }
+      if(!treeRes.ok){ const e = await treeRes.json().catch(()=>({})); throw new Error(e.message || 'Error creando el árbol de cambios.'); }
+      const treeData = await treeRes.json();
+
+      const newCommitRes = await ghFetch('/git/commits', {
+        method:'POST',
+        body: JSON.stringify({message:'Actualizar contenido del sitio desde el panel', tree: treeData.sha, parents:[baseCommitSha]})
+      });
+      if(!newCommitRes.ok){ const e = await newCommitRes.json().catch(()=>({})); throw new Error(e.message || 'Error creando el commit.'); }
+      const newCommitData = await newCommitRes.json();
+
+      const updateRefRes = await ghFetch(`/git/refs/heads/${BRANCH}`, {
+        method:'PATCH',
+        body: JSON.stringify({sha: newCommitData.sha})
+      });
+      if(!updateRefRes.ok){ const e = await updateRefRes.json().catch(()=>({})); throw new Error(e.message || 'Error publicando los cambios.'); }
 
       status.className = 'ok';
       status.textContent = '✓ Publicado. El sitio se actualiza en 1-2 minutos.';
